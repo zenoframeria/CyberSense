@@ -198,3 +198,106 @@ tokenizer.save_pretrained("02_ai/cybersense_model")
 
 print("Model saved to 02_ai/cybersense_model!")
 print("Training complete!")
+
+# ============================================
+# STEP 12: Load saved model for inference
+# ============================================
+
+from transformers import AutoTokenizer, AutoModelForSequenceClassification
+import torch
+from xai import detect_signals, highlight_text
+
+# load model once and reuse — don't reload every time!
+MODEL_PATH = "02_ai/cybersense_model"
+_tokenizer = None
+_model = None
+
+def _load_model():
+    # load model lazily — only when first needed
+    global _tokenizer, _model
+    if _tokenizer is None:
+        print("Loading model...")
+        _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+        _model.eval()  # set to evaluation mode, not training mode
+        print("Model ready!")
+
+# ============================================
+# STEP 13: Predict risk score from SMS text
+# ============================================
+
+def predict(text, sender=""):
+    # load model if not loaded yet
+    _load_model()
+    
+    # combine sender + text like we did during training
+    input_text = f"Sender: {sender} | {text}" if sender else text
+    
+    # tokenize input text
+    inputs = _tokenizer(
+        input_text,
+        return_tensors="pt",   # pt = PyTorch tensor
+        truncation=True,
+        padding=True,
+        max_length=128
+    )
+    
+    # run model — no gradient needed for inference
+    with torch.no_grad():
+        outputs = _model(**inputs)
+    
+    # convert logits to probability (0-100%)
+    probs = torch.softmax(outputs.logits, dim=1)
+    risk_score = int(probs[0][1].item() * 100)  # class 1 = scam probability
+    
+    return risk_score
+
+# ============================================
+# STEP 14: Main analyze function
+# combines WangchanBERTa + XAI together
+# ============================================
+
+def analyze_sms(text, sender=""):
+    # step 1: get risk score from AI model
+    risk_score = predict(text, sender)
+    
+    # step 2: determine label based on threshold
+    if risk_score >= 75:
+        label = "SCAM"
+    elif risk_score >= 50:
+        label = "SUSPICIOUS"
+    else:
+        label = "LEGIT"
+    
+    # step 3: get XAI signals
+    signals = detect_signals(text, sender)
+    
+    # step 4: get highlight chunks
+    highlights = highlight_text(text)
+    
+    # step 5: combine everything into one response
+    return {
+        "risk": risk_score,
+        "label": label,
+        "signals": signals,
+        "highlights": highlights
+    }
+
+# ============================================
+# Test analyze_sms!
+# ============================================
+
+if __name__ == "__main__":
+    test_sms = "ท่านมีพัสดุค้างที่ไปรษณีย์ไทย กรุณายืนยันที่อยู่ภายใน 24 ชม. คลิก: cutt.ly/9xbb"
+    
+    result = analyze_sms(test_sms, "ไปรษณีย์ไทย")
+    
+    print(f"Risk: {result['risk']}%")
+    print(f"Label: {result['label']}")
+    print(f"\nSignals ({len(result['signals'])} found):")
+    for s in result['signals']:
+        print(f"  [{s['type']}] {s['label']}")
+    print(f"\nHighlights ({len(result['highlights'])} chunks):")
+    for h in result['highlights']:
+        if h['type']:
+            print(f"  🔴 [{h['type']}] '{h['text']}'")
