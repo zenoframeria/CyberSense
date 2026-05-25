@@ -1,0 +1,2840 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CyberSense — รู้ทันก่อนโดนหลอก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ---------- TWEAKABLE TOKENS ---------- */
+  :root {
+    --bg:        #07120e;
+    --surface:   #0f1a14;
+    --surface2:  #14241c;
+    --surface3:  #1a2e23;
+    --border:    #1e3026;
+    --border2:   #26402f;
+    --text:      #e8f0ea;
+    --text2:     #b8c5bc;
+    --dim:       #5a705f;
+    --dim2:      #3d5044;
+
+    --accent:    #00e87a;
+    --accent-fg: #001a0a;
+    --accent-glow: 0,232,122;
+
+    --red:       #ff3d5a;
+    --red-glow:  255,61,90;
+    --yellow:    #ffb02e;
+    --yellow-glow: 255,176,46;
+    --orange:    #ff7a3d;
+
+    --font-base: 16px;
+    --radius:    14px;
+
+    --font-sans: 'IBM Plex Sans Thai', system-ui, sans-serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+    --t: 0.22s cubic-bezier(.4,0,.2,1);
+  }
+
+  [data-theme="light"] {
+    --bg:        #f3f7f4;
+    --surface:   #ffffff;
+    --surface2:  #f6faf7;
+    --surface3:  #eaf2ec;
+    --border:    #d9e3dc;
+    --border2:   #c4d2c8;
+    --text:      #0a1410;
+    --text2:     #2c3a30;
+    --dim:       #6a7a6e;
+    --dim2:      #95a399;
+
+    --accent:    #07a85a;
+    --accent-fg: #ffffff;
+    --accent-glow: 7,168,90;
+  }
+
+  /* ---------- RESET ---------- */
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height:100%; }
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--font-base);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font-family: inherit; color: inherit; cursor: pointer; border: none; background: none; }
+  input, textarea { font-family: inherit; color: inherit; }
+
+  /* ---------- APP SHELL (mobile only, centered on desktop) ---------- */
+  .app-stage {
+    width: 100vw; height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background:
+      radial-gradient(1200px 600px at 50% -10%, rgba(var(--accent-glow), 0.06), transparent 60%),
+      var(--bg);
+    overflow: auto;
+  }
+  .phone {
+    width: 100%; max-width: 412px; height: 100vh; max-height: 900px;
+    background: var(--bg);
+    position: relative;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+  @media (min-width: 460px) {
+    .phone {
+      border-radius: 38px;
+      box-shadow:
+        0 30px 80px -20px rgba(0,0,0,0.7),
+        0 0 0 8px #1a1a1a,
+        0 0 0 9px #2a2a2a,
+        0 0 80px -10px rgba(var(--accent-glow), 0.18);
+      height: min(900px, calc(100vh - 32px));
+    }
+  }
+
+  /* ---------- STATUS BAR ---------- */
+  .status-bar {
+    flex: 0 0 auto;
+    padding: 14px 22px 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .status-bar .right { display:flex; align-items:center; gap:5px; font-size: 11px; }
+  .signal-dots { display:flex; gap:2px; align-items:flex-end; }
+  .signal-dots span { width:3px; background: var(--text); border-radius:1px; opacity:0.85; }
+  .signal-dots span:nth-child(1){ height:4px; }
+  .signal-dots span:nth-child(2){ height:6px; }
+  .signal-dots span:nth-child(3){ height:8px; }
+  .signal-dots span:nth-child(4){ height:10px; }
+  .battery { width: 22px; height: 11px; border:1.2px solid var(--text); border-radius:3px; padding:1px; position:relative; }
+  .battery::after { content:''; position:absolute; right:-3px; top:3px; width:2px; height:5px; background: var(--text); border-radius: 0 1px 1px 0; }
+  .battery i { display:block; height:100%; width:78%; background: var(--text); border-radius:1px; }
+
+  /* ---------- HEADER (per screen) ---------- */
+  .scr-header {
+    flex: 0 0 auto;
+    padding: 6px 18px 12px;
+    display: flex; align-items:center; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    display: inline-flex; align-items:center; justify-content:center;
+    transition: var(--t);
+  }
+  .icon-btn:hover { background: var(--surface2); border-color: var(--border2); }
+  .icon-btn:active { transform: scale(0.94); }
+  .icon-btn svg { width: 18px; height: 18px; stroke: var(--text); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .scr-title-block { flex:1; min-width:0; }
+  .scr-eyebrow {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .scr-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    line-height: 1.15;
+  }
+
+  /* ---------- BODY ---------- */
+  .scr-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    padding-bottom: 90px;
+    scroll-behavior: smooth;
+  }
+  .scr-body::-webkit-scrollbar { width: 0; }
+
+  /* ---------- BOTTOM NAV ---------- */
+  .bottom-nav {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: color-mix(in oklab, var(--bg) 88%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 10px 6px calc(10px + env(safe-area-inset-bottom));
+    z-index: 50;
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    padding: 6px 2px;
+    border-radius: 12px;
+    color: var(--dim);
+    transition: var(--t);
+    position: relative;
+  }
+  .nav-item svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  .nav-item span { font-size: 10px; font-weight: 500; letter-spacing: 0.2px; }
+  .nav-item.active { color: var(--accent); }
+  .nav-item.active::before {
+    content:''; position:absolute; top: -1px; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 2px; background: var(--accent); border-radius: 0 0 4px 4px;
+    box-shadow: 0 0 12px rgba(var(--accent-glow), 0.7);
+  }
+  .nav-item:active { transform: scale(0.94); }
+
+  /* ---------- COMMON BLOCKS ---------- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .card-pad { padding: 14px; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 1px;
+    font-weight: 600;
+    text-transform: uppercase;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+  }
+  .pill.accent { background: rgba(var(--accent-glow), 0.1); border-color: rgba(var(--accent-glow), 0.3); color: var(--accent); }
+  .pill.danger { background: rgba(var(--red-glow), 0.1); border-color: rgba(var(--red-glow), 0.3); color: var(--red); }
+  .pill.warn   { background: rgba(var(--yellow-glow), 0.12); border-color: rgba(var(--yellow-glow), 0.3); color: var(--yellow); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 13px 16px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: var(--t);
+    border: 1px solid transparent;
+    width: 100%;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-fg);
+    box-shadow: 0 8px 24px -10px rgba(var(--accent-glow), 0.6);
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-primary:active { transform: scale(0.985); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+  .btn-ghost {
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+  }
+  .btn-ghost:hover { background: var(--surface2); border-color: var(--border2); }
+
+  .btn-danger {
+    background: var(--red);
+    color: white;
+  }
+
+  /* ---------- HOME ---------- */
+  .home-hero {
+    padding: 18px 18px 10px;
+  }
+  .brand-row {
+    display: flex; align-items:center; gap: 10px;
+    margin-bottom: 18px;
+  }
+  .brand-mark {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(var(--accent-glow),0.18), rgba(var(--accent-glow),0.04));
+    border: 1px solid rgba(var(--accent-glow), 0.35);
+    display: inline-flex; align-items:center; justify-content:center;
+    color: var(--accent);
+    box-shadow: 0 0 20px -5px rgba(var(--accent-glow), 0.4);
+  }
+  .brand-mark svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .brand-name { font-size: 17px; font-weight: 700; letter-spacing: -0.3px; }
+  .brand-sub { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; line-height: 1; }
+
+  .hero-headline {
+    font-size: 30px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.6px;
+    margin-bottom: 8px;
+  }
+  .hero-headline .accent { color: var(--accent); }
+  .hero-tag {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+
+  .status-card {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px;
+    background: linear-gradient(135deg, rgba(var(--accent-glow),0.08), rgba(var(--accent-glow),0.02));
+    border: 1px solid rgba(var(--accent-glow), 0.25);
+    border-radius: 14px;
+    margin-bottom: 22px;
+  }
+  .status-shield {
+    width: 42px; height: 42px;
+    border-radius: 10px;
+    background: rgba(var(--accent-glow), 0.15);
+    color: var(--accent);
+    display: inline-flex; align-items:center; justify-content:center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .status-shield svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .status-shield::after {
+    content: ''; position:absolute; top: 4px; right: 4px;
+    width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.4); } }
+  .status-card .text { flex: 1; min-width: 0; }
+  .status-card h4 { font-size: 13px; font-weight: 600; }
+  .status-card p { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2.5px;
+    color: var(--dim);
+    text-transform: uppercase;
+    padding: 0 18px;
+    margin: 6px 0 10px;
+    display: flex; align-items:center; justify-content:space-between;
+  }
+  .section-label a { color: var(--accent); text-decoration: none; font-family: var(--font-sans); font-size: 11px; letter-spacing: 0; text-transform: none; font-weight: 500; }
+
+  .feature-grid {
+    padding: 0 18px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .feat-tile {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    text-align: left;
+    transition: var(--t);
+    position: relative;
+    overflow: hidden;
+  }
+  .feat-tile::before {
+    content:''; position:absolute; inset: 0;
+    background: radial-gradient(circle at top right, rgba(var(--accent-glow), 0.12), transparent 50%);
+    opacity: 0; transition: var(--t);
+    pointer-events: none;
+  }
+  .feat-tile:hover { transform: translateY(-2px); border-color: var(--border2); }
+  .feat-tile:hover::before { opacity: 1; }
+  .feat-tile:active { transform: scale(0.98); }
+  .feat-tile.wide { grid-column: 1 / -1; }
+  .feat-icon {
+    width: 36px; height: 36px;
+    border-radius: 10px;
+    background: var(--surface2);
+    color: var(--accent);
+    display:inline-flex; align-items:center; justify-content:center;
+    margin-bottom: 10px;
+  }
+  .feat-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .feat-title { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .feat-desc  { font-size: 11px; color: var(--text2); line-height: 1.5; }
+  .feat-arrow { position: absolute; top: 14px; right: 14px; color: var(--dim); }
+  .feat-arrow svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* History items */
+  .history-list { padding: 0 18px; }
+  .hist-item {
+    display:flex; align-items:center; gap: 12px;
+    padding: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+    transition: var(--t);
+  }
+  .hist-item:hover { border-color: var(--border2); background: var(--surface2); }
+  .hist-icon { width: 34px; height: 34px; border-radius: 8px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; }
+  .hist-icon svg { width: 16px; height: 16px; stroke: currentColor; fill:none; stroke-width: 2; }
+  .hist-icon.r-high { background: rgba(var(--red-glow), 0.12); color: var(--red); }
+  .hist-icon.r-mid  { background: rgba(var(--yellow-glow), 0.12); color: var(--yellow); }
+  .hist-icon.r-low  { background: rgba(var(--accent-glow), 0.12); color: var(--accent); }
+  .hist-text { flex: 1; min-width: 0; }
+  .hist-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .hist-meta  { font-size: 10px; color: var(--dim); font-family: var(--font-mono); margin-top: 2px; }
+  .hist-score { font-family: var(--font-mono); font-weight: 700; font-size: 13px; }
+
+  .empty-state {
+    text-align: center;
+    padding: 24px 18px;
+    color: var(--dim);
+    font-size: 12px;
+  }
+  .empty-state .empty-ico {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: var(--surface);
+    border: 1px dashed var(--border2);
+    display: inline-flex; align-items:center; justify-content:center;
+    margin-bottom: 10px;
+    color: var(--dim);
+  }
+  .empty-state svg { width: 20px; height: 20px; stroke: currentColor; fill:none; stroke-width: 2; }
+
+  /* ---------- FORMS ---------- */
+  .input-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin: 0 18px 12px;
+    overflow: hidden;
+  }
+  .input-block-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface2);
+  }
+  .input-block-head .lbl {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  .text-area {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+    padding: 14px;
+    resize: none;
+    min-height: 110px;
+    font-family: var(--font-sans);
+  }
+  .text-area::placeholder { color: var(--dim); }
+
+  .url-input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 14px;
+    padding: 14px;
+    font-family: var(--font-mono);
+  }
+  .url-input::placeholder { color: var(--dim); font-family: var(--font-mono); }
+
+  .scenario-row {
+    padding: 0 18px 12px;
+  }
+  .scenario-pills {
+    display: flex; gap: 6px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .scenario-pills::-webkit-scrollbar { display: none; }
+  .sc-pill {
+    flex-shrink: 0;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 500;
+    transition: var(--t);
+    white-space: nowrap;
+  }
+  .sc-pill:hover { background: var(--surface2); }
+  .sc-pill.active {
+    background: rgba(var(--accent-glow), 0.12);
+    border-color: rgba(var(--accent-glow), 0.4);
+    color: var(--accent);
+  }
+
+  .actions-row {
+    padding: 0 18px;
+    display: flex; gap: 8px;
+  }
+
+  /* ---------- RESULT BLOCKS ---------- */
+  .result-card {
+    margin: 14px 18px 0;
+    padding: 16px;
+    border-radius: 16px;
+    border: 1px solid;
+    position: relative;
+    overflow: hidden;
+  }
+  .result-card.r-high {
+    background: linear-gradient(180deg, rgba(var(--red-glow),0.08), transparent);
+    border-color: rgba(var(--red-glow), 0.3);
+  }
+  .result-card.r-mid {
+    background: linear-gradient(180deg, rgba(var(--yellow-glow),0.08), transparent);
+    border-color: rgba(var(--yellow-glow), 0.3);
+  }
+  .result-card.r-low {
+    background: linear-gradient(180deg, rgba(var(--accent-glow),0.08), transparent);
+    border-color: rgba(var(--accent-glow), 0.3);
+  }
+
+  .verdict-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .verdict-label .v-eyebrow { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+  .verdict-label .v-title { font-size: 18px; font-weight: 700; margin-top: 2px; line-height: 1.2; }
+  .r-high .verdict-label .v-title { color: var(--red); }
+  .r-mid  .verdict-label .v-title { color: var(--yellow); }
+  .r-low  .verdict-label .v-title { color: var(--accent); }
+
+  .risk-num {
+    font-family: var(--font-mono);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -1px;
+  }
+  .risk-num small { font-size: 16px; opacity: 0.7; margin-left: 1px; }
+  .r-high .risk-num { color: var(--red); }
+  .r-mid  .risk-num { color: var(--yellow); }
+  .r-low  .risk-num { color: var(--accent); }
+
+  .risk-track-wrap { margin-bottom: 4px; }
+  .risk-track {
+    height: 6px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+  }
+  [data-theme="light"] .risk-track { background: rgba(0,0,0,0.06); }
+  .risk-prog {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.8s cubic-bezier(.4,0,.2,1);
+    width: 0;
+  }
+  .r-high .risk-prog { background: linear-gradient(90deg, var(--yellow), var(--red)); box-shadow: 0 0 12px rgba(var(--red-glow), 0.5); }
+  .r-mid .risk-prog  { background: linear-gradient(90deg, var(--accent), var(--yellow)); }
+  .r-low .risk-prog  { background: var(--accent); }
+  .risk-axis { display:flex; justify-content:space-between; font-family: var(--font-mono); font-size: 9px; color: var(--dim); margin-top: 6px; letter-spacing: 1px; }
+
+  /* XAI text highlight */
+  .xai-block { margin: 14px 18px 0; }
+  .xai-head {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    padding: 0 4px;
+  }
+  .xai-quote {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 13px;
+    line-height: 1.85;
+    color: var(--text);
+  }
+  .hl-r { background: rgba(var(--red-glow), 0.18); color: var(--red); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
+  .hl-y { background: rgba(var(--yellow-glow), 0.18); color: var(--yellow); border-radius: 3px; padding: 1px 4px; font-weight: 500; text-decoration: underline; text-decoration-color: rgba(var(--yellow-glow), 0.4); }
+  .hl-o { background: rgba(255,122,61, 0.18); color: var(--orange); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
+
+  .signal-list { margin: 10px 18px 0; }
+  .sig {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+  .sig-ico {
+    width: 28px; height: 28px;
+    border-radius: 7px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    display: inline-flex; align-items:center; justify-content:center;
+  }
+  .sig-ico svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .sig-ico.bad { background: rgba(var(--red-glow), 0.12); color: var(--red); }
+  .sig-ico.warn { background: rgba(var(--yellow-glow), 0.12); color: var(--yellow); }
+  .sig-ico.ok { background: rgba(var(--accent-glow), 0.12); color: var(--accent); }
+  .sig-body { flex:1; min-width: 0; }
+  .sig-title { font-size: 12px; font-weight: 600; }
+  .sig-desc  { font-size: 11px; color: var(--text2); margin-top: 2px; line-height: 1.5; }
+  .sig-tag   { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: var(--dim); text-transform: uppercase; flex-shrink:0; padding-top: 2px; }
+
+  .recommend-card {
+    margin: 14px 18px 0;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .recommend-card .rc-ico { width: 28px; height: 28px; border-radius: 7px; background: rgba(var(--accent-glow), 0.12); color: var(--accent); display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .recommend-card svg { width: 14px; height: 14px; stroke: currentColor; fill:none; stroke-width:2;}
+  .recommend-card h5 { font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+  .recommend-card p { font-size: 11px; color: var(--text2); line-height: 1.55; }
+
+  /* ---------- VOICE — TABS ---------- */
+  .tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 4px;
+    margin: 0 18px 14px;
+    position: relative;
+  }
+  .tab {
+    padding: 10px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    border-radius: 9px;
+    transition: var(--t);
+    z-index: 1;
+  }
+  .tab.active {
+    background: var(--surface3);
+    color: var(--accent);
+    box-shadow: 0 2px 8px -3px rgba(0,0,0,0.4);
+  }
+
+  /* Drop zone */
+  .dropzone {
+    margin: 0 18px 12px;
+    padding: 28px 20px;
+    border: 1.5px dashed var(--border2);
+    border-radius: 14px;
+    text-align: center;
+    background: var(--surface);
+    transition: var(--t);
+    cursor: pointer;
+  }
+  .dropzone:hover, .dropzone.drag {
+    border-color: var(--accent);
+    background: rgba(var(--accent-glow), 0.05);
+  }
+  .dz-ico {
+    width: 50px; height: 50px;
+    border-radius: 14px;
+    background: var(--surface2);
+    color: var(--accent);
+    display: inline-flex; align-items:center; justify-content:center;
+    margin-bottom: 12px;
+  }
+  .dz-ico svg { width: 24px; height: 24px; stroke: currentColor; fill:none; stroke-width: 1.8; }
+  .dz-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .dz-sub { font-size: 11px; color: var(--text2); }
+  .dz-types { font-family: var(--font-mono); font-size: 9px; color: var(--dim); margin-top: 8px; letter-spacing: 1px; }
+
+  .file-row {
+    margin: 0 18px 12px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .file-icon {
+    width: 36px; height: 36px;
+    border-radius: 9px;
+    background: var(--surface2);
+    color: var(--accent);
+    flex-shrink: 0;
+    display: inline-flex; align-items:center; justify-content:center;
+  }
+  .file-icon svg { width: 18px; height: 18px; stroke: currentColor; fill:none; stroke-width: 2; }
+  .file-meta { flex:1; min-width: 0; }
+  .file-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-size { font-size: 10px; color: var(--dim); font-family: var(--font-mono); margin-top: 2px; }
+
+  /* Wave bars */
+  .wave {
+    display: flex; align-items: flex-end; gap: 2px;
+    height: 22px;
+    flex-shrink: 0;
+  }
+  .wave span {
+    width: 2px;
+    background: var(--accent);
+    border-radius: 1px;
+    opacity: 0.7;
+    animation: wave 1.1s ease-in-out infinite;
+  }
+  @keyframes wave { 0%,100% { height: 4px; } 50% { height: 22px; } }
+
+  /* Transcript */
+  .transcript {
+    margin: 0 18px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .transcript-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+    display: flex; justify-content: space-between; align-items:center;
+  }
+  .transcript-head .lbl {font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase;}
+  .transcript-body { padding: 4px 14px 14px; max-height: 240px; overflow-y: auto; }
+  .transcript-body::-webkit-scrollbar { width: 0; }
+  .tr-line {
+    display: grid;
+    grid-template-columns: 38px 1fr;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border);
+    align-items: flex-start;
+  }
+  .tr-line:last-child { border-bottom: none; }
+  .tr-time { font-family: var(--font-mono); font-size: 10px; color: var(--dim); padding-top: 2px; }
+  .tr-text { font-size: 12.5px; line-height: 1.55; color: var(--text); }
+
+  /* ---------- INCOMING CALL — FULL SCREEN ---------- */
+  .call-overlay {
+    position: absolute; inset: 0; z-index: 100;
+    background:
+      radial-gradient(circle at 50% 30%, #190a14, #050908 70%);
+    color: white;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .call-overlay.show { display: flex; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .call-status-bar {
+    flex: 0 0 auto;
+    padding: 14px 22px 6px;
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: white;
+  }
+  .call-status-bar .battery { border-color: white; }
+  .call-status-bar .battery i { background: white; }
+  .call-status-bar .battery::after { background: white; }
+  .call-status-bar .signal-dots span { background: white; }
+
+  .call-app-bar {
+    padding: 12px 18px 0;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .call-app-name { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; }
+  .call-app-name .badge-ai {
+    font-family: var(--font-mono);
+    font-size: 9px; letter-spacing: 1.5px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: linear-gradient(135deg, #7B5CFF, #4F46E5);
+    color: white;
+  }
+  .call-rec {
+    display: none;
+    align-items: center; gap: 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    background: rgba(255,61,90,0.18);
+    color: #ff8099;
+    border: 1px solid rgba(255,61,90,0.25);
+  }
+  .call-rec.show { display: inline-flex; }
+  .call-rec .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: blink 1s infinite; }
+  @keyframes blink { 50% { opacity: 0.3; } }
+
+  .call-main {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+  }
+  .call-label { font-size: 14px; color: rgba(255,255,255,0.7); margin-bottom: 22px; letter-spacing: 1px; }
+
+  .call-avatar {
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(123, 92, 255, 0.4), rgba(79, 70, 229, 0.1) 70%);
+    display: flex; align-items: center; justify-content: center;
+    color: rgba(255,255,255,0.85);
+    font-size: 64px;
+    font-weight: 200;
+    position: relative;
+    margin-bottom: 26px;
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .call-avatar::before, .call-avatar::after {
+    content:''; position:absolute; inset: -16px;
+    border-radius: 50%;
+    border: 1px solid rgba(123, 92, 255, 0.3);
+    animation: ringPulse 2s ease-out infinite;
+  }
+  .call-avatar::after { animation-delay: 1s; }
+  @keyframes ringPulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    100% { transform: scale(1.25); opacity: 0; }
+  }
+  .call-avatar .ai-eyes {
+    display: flex; gap: 14px;
+  }
+  .call-avatar .ai-eyes span {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #00d4ff;
+    box-shadow: 0 0 18px #00d4ff;
+  }
+
+  .call-name { font-size: 24px; font-weight: 600; margin-bottom: 4px; }
+  .call-number { font-family: var(--font-mono); font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 14px; }
+
+  .susp-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(var(--red-glow), 0.15);
+    border: 1px solid rgba(var(--red-glow), 0.4);
+    color: #ff8099;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .susp-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: blink 1.5s infinite; }
+
+  /* Live AI panel during call */
+  .live-panel {
+    position: absolute;
+    left: 18px; right: 18px;
+    bottom: 24px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 14px;
+    padding: 14px;
+    backdrop-filter: blur(20px);
+    display: none;
+  }
+  .live-panel.show { display: block; }
+  .live-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .live-head .lbl { font-size: 12px; font-weight: 600; }
+  .live-progress-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; margin-bottom: 10px; }
+  .live-progress-bar i { display:block; height:100%; background: linear-gradient(90deg, #7B5CFF, #00d4ff); transition: width 0.4s ease; }
+  .live-feed { max-height: 100px; overflow-y: auto; font-size: 11px; line-height: 1.55; }
+  .live-feed::-webkit-scrollbar { width: 0; }
+  .live-feed .feed-line {
+    padding: 4px 0;
+    color: rgba(255,255,255,0.7);
+    display: flex; gap: 8px; align-items: flex-start;
+    animation: feedIn 0.3s ease;
+  }
+  @keyframes feedIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .feed-line .feed-time { font-family: var(--font-mono); font-size: 10px; color: rgba(255,255,255,0.4); flex-shrink: 0; min-width: 32px; }
+  .feed-line.alert { color: #ff8099; }
+  .feed-line.alert .feed-time { color: rgba(255,61,90,0.6); }
+
+  /* Call action buttons */
+  .call-actions {
+    flex: 0 0 auto;
+    padding: 24px 36px 36px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .call-btn {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .call-btn .ring {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    transition: var(--t);
+  }
+  .call-btn:active .ring { transform: scale(0.92); }
+  .call-btn span { font-size: 11px; color: rgba(255,255,255,0.7); }
+  .call-btn.decline .ring { background: var(--red); box-shadow: 0 8px 24px -8px rgba(var(--red-glow), 0.6); }
+  .call-btn.accept .ring { background: #00c853; box-shadow: 0 8px 24px -8px rgba(0, 200, 83, 0.6); animation: greenPulse 1.4s ease-in-out infinite; }
+  @keyframes greenPulse { 0%,100% { box-shadow: 0 8px 24px -8px rgba(0,200,83,0.6); } 50% { box-shadow: 0 8px 32px -4px rgba(0,200,83,0.9); } }
+  .call-btn.mute .ring, .call-btn.spk .ring { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); }
+  .call-btn .ring svg { width: 26px; height: 26px; stroke: white; fill: none; stroke-width: 2; }
+  .call-btn.decline .ring svg { transform: rotate(135deg); }
+
+  /* In-call active layout */
+  .call-active-actions {
+    display: none;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+    width: 100%;
+  }
+  .call-active-actions .call-btn { margin: 0 auto; }
+  .call-overlay[data-state="answered"] .call-actions { display: flex; justify-content: center; }
+  .call-overlay[data-state="answered"] .incoming-actions { display: none; }
+  .call-overlay[data-state="answered"] .call-active-actions { display: grid; }
+
+  /* ---------- DANGER TAKEOVER (full screen warning) ---------- */
+  .takeover {
+    position: absolute; inset: 0; z-index: 110;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+    overflow-y: auto;
+    animation: slideUp 0.35s cubic-bezier(.4,0,.2,1);
+  }
+  .takeover.show { display: flex; }
+  @keyframes slideUp {
+    from { transform: translateY(40px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .takeover.danger {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(var(--red-glow), 0.18), transparent 60%),
+      var(--bg);
+  }
+  .takeover.safe {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(var(--accent-glow), 0.12), transparent 60%),
+      var(--bg);
+  }
+  .takeover-close {
+    align-self: flex-end;
+    margin: 14px 14px 0;
+  }
+  .takeover-hero {
+    text-align: center;
+    padding: 20px 24px 0;
+  }
+  .takeover-icon {
+    width: 80px; height: 80px;
+    border-radius: 24px;
+    margin: 14px auto 18px;
+    display: inline-flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .takeover.danger .takeover-icon {
+    background: rgba(var(--red-glow), 0.15);
+    color: var(--red);
+    box-shadow: 0 0 60px -10px rgba(var(--red-glow), 0.5);
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97);
+  }
+  .takeover.safe .takeover-icon {
+    background: rgba(var(--accent-glow), 0.15);
+    color: var(--accent);
+    box-shadow: 0 0 60px -10px rgba(var(--accent-glow), 0.5);
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  .takeover-icon svg { width: 40px; height: 40px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+  .takeover-title {
+    font-size: 26px; font-weight: 700;
+    line-height: 1.1; letter-spacing: -0.5px;
+    margin-bottom: 8px;
+  }
+  .takeover.danger .takeover-title { color: var(--red); }
+  .takeover.safe .takeover-title { color: var(--accent); }
+  .takeover-sub {
+    font-size: 13px;
+    color: var(--text2);
+    line-height: 1.55;
+    margin-bottom: 18px;
+  }
+  .takeover-url {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    padding: 6px 12px;
+    border-radius: 8px;
+    word-break: break-all;
+    max-width: 100%;
+  }
+  .takeover-risk {
+    font-family: var(--font-mono);
+    font-size: 56px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -2px;
+    margin: 16px 0 4px;
+  }
+  .takeover.danger .takeover-risk { color: var(--red); }
+  .takeover.safe  .takeover-risk { color: var(--accent); }
+  .takeover-risk small { font-size: 22px; opacity: 0.65; }
+  .takeover-risk-lbl { font-size: 12px; color: var(--text2); }
+
+  .takeover-checks {
+    margin: 22px 18px 0;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+  .takeover-checks .row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .takeover-checks .row:last-child { border-bottom: none; }
+  .check-ico { width: 30px; height: 30px; border-radius: 8px; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center; }
+  .check-ico svg { width: 14px; height: 14px; stroke: currentColor; fill:none; stroke-width: 2; }
+  .check-text { flex:1; min-width: 0; }
+  .check-title { font-size: 13px; font-weight: 600; }
+  .check-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+  .check-val { font-family: var(--font-mono); font-size: 11px; font-weight: 700; }
+  .v-bad { color: var(--red); }
+  .v-warn { color: var(--yellow); }
+  .v-ok { color: var(--accent); }
+
+  .takeover-actions {
+    padding: 20px 18px 30px;
+    display: grid;
+    gap: 8px;
+  }
+
+  /* ---------- TWEAKS PANEL ---------- */
+  .tweaks-fab {
+    position: absolute;
+    top: 14px; right: 14px;
+    z-index: 80;
+    display: none;
+  }
+  .tweaks-fab.show { display: block; }
+
+  .tweaks-panel {
+    position: absolute;
+    top: 0; right: 0;
+    width: 86%;
+    max-width: 320px;
+    height: 100%;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    box-shadow: -20px 0 60px -10px rgba(0,0,0,0.5);
+    z-index: 200;
+    transform: translateX(105%);
+    transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column;
+  }
+  .tweaks-panel.show { transform: translateX(0); }
+  .tweaks-head {
+    padding: 18px 18px 14px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .tweaks-head h3 { font-size: 16px; font-weight: 700; }
+  .tweaks-head .pill { font-size: 9px; }
+  .tweaks-body { flex: 1; overflow-y: auto; padding: 14px 18px; }
+  .tweaks-body::-webkit-scrollbar { width: 0; }
+  .tweak-section { margin-bottom: 22px; }
+  .tweak-section h4 {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .seg-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 3px;
+  }
+  .seg-toggle button {
+    padding: 9px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    border-radius: 7px;
+    transition: var(--t);
+  }
+  .seg-toggle button.active { background: var(--surface); color: var(--text); }
+
+  .swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+  .swatch {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: var(--t);
+    position: relative;
+  }
+  .swatch.active { border-color: var(--text); }
+  .swatch:hover { transform: scale(1.06); }
+
+  .slider-row { display: flex; align-items: center; gap: 12px; }
+  .slider-row input[type="range"] {
+    flex: 1;
+    -webkit-appearance: none; appearance: none;
+    height: 4px;
+    background: var(--surface2);
+    border-radius: 2px;
+    outline: none;
+  }
+  .slider-row input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 4px rgba(var(--accent-glow), 0.2);
+  }
+  .slider-row .slider-val { font-family: var(--font-mono); font-size: 12px; min-width: 38px; text-align: right; color: var(--text2); }
+
+  .scen-list { display: grid; gap: 6px; }
+  .scen-list button {
+    text-align: left;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text2);
+    transition: var(--t);
+  }
+  .scen-list button.active {
+    background: rgba(var(--accent-glow), 0.1);
+    border-color: rgba(var(--accent-glow), 0.4);
+    color: var(--accent);
+  }
+  .scen-list .scen-tag {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--dim);
+    text-transform: uppercase;
+    margin-bottom: 2px;
+    display: block;
+  }
+
+  .panel-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 150;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .panel-overlay.show { opacity: 1; pointer-events: auto; }
+
+  /* Spinner */
+  .loading-state {
+    text-align: center;
+    padding: 40px 20px;
+  }
+  .spinner {
+    width: 40px; height: 40px;
+    border: 3px solid var(--surface2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    margin: 0 auto 14px;
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-text { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .loading-substep { font-size: 11px; color: var(--dim); font-family: var(--font-mono); letter-spacing: 1px; }
+
+  /* AI thinking pulse */
+  .ai-orb {
+    width: 80px; height: 80px;
+    border-radius: 50%;
+    margin: 0 auto 16px;
+    background: radial-gradient(circle, rgba(var(--accent-glow),0.3), rgba(var(--accent-glow),0.05) 70%);
+    border: 1px solid rgba(var(--accent-glow),0.3);
+    display: flex; align-items: center; justify-content: center;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    font-size: 20px; font-weight: 700;
+    position: relative;
+    animation: orbPulse 2s ease-in-out infinite;
+  }
+  @keyframes orbPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(var(--accent-glow), 0.4); }
+    50% { box-shadow: 0 0 0 14px rgba(var(--accent-glow), 0); }
+  }
+
+  /* Utility */
+  .stack-12 > * + * { margin-top: 12px; }
+  .stack-8 > * + * { margin-top: 8px; }
+  .row-between { display: flex; justify-content: space-between; align-items: center; }
+  .show { display: block; }
+  .hide { display: none !important; }
+
+  .info-strip {
+    margin: 0 18px 12px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent);
+    border-radius: 8px;
+    font-size: 11.5px;
+    color: var(--text2);
+    line-height: 1.55;
+  }
+  .info-strip strong { color: var(--text); }
+</style>
+</head>
+<body>
+
+<div class="app-stage">
+  <div class="phone" id="phone">
+
+    <!-- ===== STATUS BAR ===== -->
+    <div class="status-bar">
+      <span id="clock">9:41</span>
+      <span class="right">
+        <span class="signal-dots"><span></span><span></span><span></span><span></span></span>
+        <span style="margin-left:4px">5G</span>
+        <span class="battery"><i></i></span>
+      </span>
+    </div>
+
+    <!-- ===== HOME SCREEN ===== -->
+    <section class="screen" id="screen-home" style="display:flex; flex-direction:column; flex:1; min-height:0;">
+      <div class="scr-body">
+        <div class="home-hero">
+          <div class="brand-row">
+            <div class="brand-mark">
+              <svg viewBox="0 0 24 24"><path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/><path d="M9 12l2 2 4-4"/></svg>
+            </div>
+            <div>
+              <div class="brand-name">CyberSense</div>
+              <div class="brand-sub">AI Scam Shield · TH</div>
+            </div>
+            <div style="margin-left:auto">
+              <button class="icon-btn" onclick="openTweaks()" aria-label="Settings">
+                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </button>
+            </div>
+          </div>
+
+          <h1 class="hero-headline">รู้ทัน<br/><span class="accent">ก่อนโดนหลอก</span></h1>
+          <p class="hero-tag">ตรวจจับการหลอกลวงออนไลน์ด้วย AI ที่เข้าใจภาษาไทย — SMS, ลิงก์, สายเรียกเข้า</p>
+
+          <div class="status-card">
+            <div class="status-shield">
+              <svg viewBox="0 0 24 24"><path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/></svg>
+            </div>
+            <div class="text">
+              <h4>การป้องกันทำงานอยู่</h4>
+              <p>วิเคราะห์แล้ว <span id="stat-count">0</span> รายการ · บล็อกแล้ว <span id="stat-blocked">0</span></p>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-label">เครื่องมือตรวจสอบ</div>
+        <div class="feature-grid">
+          <button class="feat-tile" onclick="goTo('sms')">
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+            <div class="feat-title">วิเคราะห์ SMS</div>
+            <div class="feat-desc">วาง SMS ที่สงสัย</div>
+            <div class="feat-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+          </button>
+          <button class="feat-tile" onclick="goTo('link')">
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></div>
+            <div class="feat-title">สแกนลิงก์</div>
+            <div class="feat-desc">ตรวจ URL ก่อนคลิก</div>
+            <div class="feat-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+          </button>
+          <button class="feat-tile wide" onclick="goTo('voice')">
+            <div class="feat-icon"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <div class="feat-title">วิเคราะห์เสียง / สาย</div>
+            <div class="feat-desc">อัปโหลดไฟล์เสียง หรือจำลองสายเรียกเข้า</div>
+            <div class="feat-arrow"><svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg></div>
+          </button>
+        </div>
+
+        <div class="section-label" style="margin-top:22px">
+          <span>ประวัติล่าสุด</span>
+          <a href="#" onclick="event.preventDefault(); clearHistory();">ล้าง</a>
+        </div>
+        <div class="history-list" id="history-list">
+          <div class="empty-state">
+            <div class="empty-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg></div>
+            <div>ยังไม่มีประวัติการตรวจสอบ</div>
+          </div>
+        </div>
+
+        <div style="height:24px"></div>
+      </div>
+    </section>
+
+    <!-- ===== SMS ANALYZE ===== -->
+    <section class="screen" id="screen-sms" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <header class="scr-header">
+        <button class="icon-btn" onclick="goTo('home')" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="scr-title-block">
+          <div class="scr-eyebrow">Feature 01 · SMS Detection</div>
+          <div class="scr-title">วิเคราะห์ SMS</div>
+        </div>
+        <button class="icon-btn" onclick="openTweaks()" aria-label="Tweaks"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+      </header>
+
+      <div class="scr-body" id="sms-body">
+        <div style="padding:14px 0 6px;">
+          <div class="input-block">
+            <div class="input-block-head">
+              <span class="lbl">▸ ข้อความที่ต้องการวิเคราะห์</span>
+              <button class="pill" onclick="clearSmsInput()" style="padding:3px 8px;font-size:9px;">ล้าง</button>
+            </div>
+            <textarea class="text-area" id="sms-input" placeholder="วางข้อความ SMS ที่สงสัยที่นี่..."></textarea>
+          </div>
+
+          <div class="scenario-row">
+            <div class="xai-head" style="padding:0 0 6px;">▸ หรือเลือก scenario ตัวอย่าง</div>
+            <div class="scenario-pills" id="sms-scenarios"></div>
+          </div>
+
+          <div class="actions-row">
+            <button class="btn btn-primary" id="sms-analyze-btn" onclick="analyzeSms()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              วิเคราะห์
+            </button>
+          </div>
+        </div>
+
+        <div id="sms-loading" class="hide">
+          <div class="loading-state">
+            <div class="ai-orb">AI</div>
+            <div class="loading-text">กำลังวิเคราะห์ด้วย AI...</div>
+            <div class="loading-substep" id="sms-substep">› TOKENIZE TH</div>
+          </div>
+        </div>
+
+        <div id="sms-result"></div>
+
+        <div style="height:30px"></div>
+      </div>
+    </section>
+
+    <!-- ===== LINK SCAN ===== -->
+    <section class="screen" id="screen-link" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <header class="scr-header">
+        <button class="icon-btn" onclick="goTo('home')" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="scr-title-block">
+          <div class="scr-eyebrow">Feature 02 · URL Sandbox</div>
+          <div class="scr-title">สแกนลิงก์</div>
+        </div>
+        <button class="icon-btn" onclick="openTweaks()" aria-label="Tweaks"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+      </header>
+
+      <div class="scr-body">
+        <div style="padding:14px 0 6px;">
+          <div class="input-block">
+            <div class="input-block-head">
+              <span class="lbl">▸ วาง URL ที่สงสัย</span>
+            </div>
+            <input class="url-input" id="link-input" placeholder="https://..." />
+          </div>
+
+          <div class="scenario-row">
+            <div class="xai-head" style="padding:0 0 6px;">▸ หรือเลือก URL ตัวอย่าง</div>
+            <div class="scenario-pills" id="link-scenarios"></div>
+          </div>
+
+          <div class="actions-row">
+            <button class="btn btn-primary" onclick="scanLink()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              สแกนใน Sandbox
+            </button>
+          </div>
+
+          <div class="info-strip" style="margin-top:14px;">
+            <strong>🛡️ AI เข้าไปสำรวจเว็บแทนคุณ</strong> — คุณไม่ต้องเสี่ยงกดเข้าไปเอง ระบบเช็ค domain age, SSL, การเลียนแบบแบรนด์ และฐานข้อมูล phishing สากล
+          </div>
+        </div>
+
+        <div id="link-loading" class="hide">
+          <div class="loading-state">
+            <div class="ai-orb">⟳</div>
+            <div class="loading-text">Sandbox กำลังสำรวจเว็บ...</div>
+            <div class="loading-substep" id="link-substep">› DOMAIN LOOKUP</div>
+          </div>
+        </div>
+
+        <div id="link-result"></div>
+
+        <div style="height:30px"></div>
+      </div>
+    </section>
+
+    <!-- ===== VOICE ===== -->
+    <section class="screen" id="screen-voice" style="display:none; flex-direction:column; flex:1; min-height:0;">
+      <header class="scr-header">
+        <button class="icon-btn" onclick="goTo('home')" aria-label="Back"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <div class="scr-title-block">
+          <div class="scr-eyebrow">Feature 03 · Voice Shield</div>
+          <div class="scr-title">วิเคราะห์เสียง</div>
+        </div>
+        <button class="icon-btn" onclick="openTweaks()" aria-label="Tweaks"><svg viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></button>
+      </header>
+
+      <div class="scr-body">
+        <div style="padding:14px 0 0;">
+          <div class="tabs" id="voice-tabs">
+            <button class="tab active" data-tab="upload" onclick="switchVoiceTab('upload')">📁 อัปโหลดไฟล์</button>
+            <button class="tab" data-tab="call" onclick="switchVoiceTab('call')">📞 จำลองสาย</button>
+          </div>
+
+          <!-- Upload tab -->
+          <div id="voice-upload">
+            <div class="dropzone" id="dropzone" onclick="pickFile()">
+              <input type="file" id="audio-file" accept="audio/*" style="display:none" onchange="onFilePicked()" />
+              <div class="dz-ico"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg></div>
+              <div class="dz-title">วางไฟล์เสียงที่นี่</div>
+              <div class="dz-sub">หรือกดเพื่อเลือกจากเครื่อง</div>
+              <div class="dz-types">MP3 · WAV · M4A · MAX 10MB</div>
+            </div>
+
+            <div class="scenario-row">
+              <div class="xai-head" style="padding:0 0 6px;">▸ หรือใช้ตัวอย่างเสียง</div>
+              <div class="scenario-pills" id="voice-scenarios"></div>
+            </div>
+
+            <div id="voice-file-row" class="hide"></div>
+
+            <div class="actions-row" id="voice-action-row" style="display:none;">
+              <button class="btn btn-primary" onclick="analyzeVoice()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                ถอดเสียง + วิเคราะห์
+              </button>
+            </div>
+
+            <div id="voice-loading" class="hide">
+              <div class="loading-state">
+                <div class="ai-orb">▶</div>
+                <div class="loading-text" id="voice-loading-text">กำลังถอดเสียงเป็นข้อความไทย...</div>
+                <div class="loading-substep" id="voice-substep">› SPEECH-TO-TEXT</div>
+              </div>
+            </div>
+
+            <div id="voice-result"></div>
+          </div>
+
+          <!-- Call demo tab -->
+          <div id="voice-call" class="hide">
+            <div style="padding:0 18px 18px;">
+              <div class="info-strip" style="margin: 0 0 14px;">
+                <strong>📞 จำลองสายเรียกเข้า</strong> — ดูตัวอย่างว่า CyberSense จะแจ้งเตือนคุณยังไง เมื่อมีสายต้องสงสัยเข้ามา
+              </div>
+              <div class="xai-head" style="padding:0 0 8px;">▸ เลือก scenario สาย</div>
+              <div class="scen-list" id="call-scenarios"></div>
+              <div style="height:14px;"></div>
+              <button class="btn btn-primary" onclick="startIncomingCall()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                เริ่มจำลองสาย
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="height:30px"></div>
+      </div>
+    </section>
+
+    <!-- ===== TAKEOVER (warning / safe full-screen) ===== -->
+    <div class="takeover" id="takeover"></div>
+
+    <!-- ===== INCOMING CALL OVERLAY ===== -->
+    <div class="call-overlay" id="call-overlay" data-state="incoming">
+      <div class="call-status-bar">
+        <span id="call-clock">9:41</span>
+        <span class="right">
+          <span class="signal-dots"><span></span><span></span><span></span><span></span></span>
+          <span style="margin-left:4px">5G</span>
+          <span class="battery"><i></i></span>
+        </span>
+      </div>
+      <div class="call-app-bar">
+        <div class="call-app-name">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00e87a" stroke-width="2"><path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/></svg>
+          CyberSense
+          <span class="badge-ai">AI</span>
+        </div>
+        <div class="call-rec" id="call-rec"><span class="dot"></span> REC <span id="call-timer">00:00</span></div>
+      </div>
+
+      <div class="call-main">
+        <div class="call-label" id="call-label">สายเรียกเข้า</div>
+        <div class="call-avatar" id="call-avatar">
+          <span id="call-avatar-content">?</span>
+        </div>
+        <div class="call-name" id="call-name">ไม่รู้จักหมายเลข</div>
+        <div class="call-number" id="call-number">+66 98x xxx xxxx</div>
+        <div id="call-susp" class="susp-badge"><span class="dot"></span> อาจเป็นมิจฉาชีพ</div>
+
+        <div class="live-panel" id="live-panel">
+          <div class="live-head">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00d4ff" stroke-width="2"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="9"/></svg>
+            <div class="lbl">AI กำลังฟัง · <span id="live-stage">วิเคราะห์...</span></div>
+            <div style="margin-left:auto; font-family: var(--font-mono); font-size:12px; font-weight:600; color: #00d4ff;" id="live-pct">0%</div>
+          </div>
+          <div class="live-progress-bar"><i id="live-bar" style="width:0%"></i></div>
+          <div class="live-feed" id="live-feed"></div>
+        </div>
+      </div>
+
+      <div class="call-actions">
+        <div class="incoming-actions" style="display:flex; justify-content:space-between; width:100%;">
+          <button class="call-btn decline" onclick="endCall()">
+            <div class="ring"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <span>ปฏิเสธ</span>
+          </button>
+          <button class="call-btn accept" onclick="answerCall()">
+            <div class="ring"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <span>รับสาย</span>
+          </button>
+        </div>
+        <div class="call-active-actions">
+          <button class="call-btn spk">
+            <div class="ring"><svg viewBox="0 0 24 24"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg></div>
+            <span>ลำโพง</span>
+          </button>
+          <button class="call-btn decline" onclick="endCall()">
+            <div class="ring"><svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+            <span>วางสาย</span>
+          </button>
+          <button class="call-btn mute">
+            <div class="ring"><svg viewBox="0 0 24 24"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/></svg></div>
+            <span>ปิดไมค์</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== BOTTOM NAV ===== -->
+    <nav class="bottom-nav" id="bottom-nav">
+      <button class="nav-item active" data-screen="home" onclick="goTo('home')">
+        <svg viewBox="0 0 24 24"><path d="M3 9.5L12 3l9 6.5V20a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg>
+        <span>หน้าแรก</span>
+      </button>
+      <button class="nav-item" data-screen="sms" onclick="goTo('sms')">
+        <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        <span>SMS</span>
+      </button>
+      <button class="nav-item" data-screen="link" onclick="goTo('link')">
+        <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        <span>ลิงก์</span>
+      </button>
+      <button class="nav-item" data-screen="voice" onclick="goTo('voice')">
+        <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+        <span>เสียง</span>
+      </button>
+    </nav>
+
+    <!-- ===== TWEAKS PANEL ===== -->
+    <div class="panel-overlay" id="panel-overlay" onclick="closeTweaks()"></div>
+    <aside class="tweaks-panel" id="tweaks-panel">
+      <div class="tweaks-head">
+        <h3>Tweaks</h3>
+        <button class="icon-btn" onclick="closeTweaks()" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
+      </div>
+      <div class="tweaks-body">
+        <div class="tweak-section">
+          <h4>▸ ธีม</h4>
+          <div class="seg-toggle" id="theme-toggle">
+            <button data-theme="dark" class="active">🌙 มืด</button>
+            <button data-theme="light">☀️ สว่าง</button>
+          </div>
+        </div>
+
+        <div class="tweak-section">
+          <h4>▸ สี Accent</h4>
+          <div class="swatches" id="accent-swatches">
+            <div class="swatch active" data-accent="#00e87a" data-glow="0,232,122" data-fg="#001a0a" style="background:#00e87a"></div>
+            <div class="swatch" data-accent="#22d3a8" data-glow="34,211,168" data-fg="#001f17" style="background:#22d3a8"></div>
+            <div class="swatch" data-accent="#00d4ff" data-glow="0,212,255" data-fg="#00141f" style="background:#00d4ff"></div>
+            <div class="swatch" data-accent="#a855f7" data-glow="168,85,247" data-fg="#1a0033" style="background:#a855f7"></div>
+            <div class="swatch" data-accent="#f97316" data-glow="249,115,22" data-fg="#1a0d00" style="background:#f97316"></div>
+            <div class="swatch" data-accent="#ff3d5a" data-glow="255,61,90" data-fg="#1f0008" style="background:#ff3d5a"></div>
+          </div>
+        </div>
+
+        <div class="tweak-section">
+          <h4>▸ ขนาดตัวอักษร</h4>
+          <div class="slider-row">
+            <input type="range" id="font-slider" min="14" max="20" step="1" value="16" />
+            <div class="slider-val" id="font-val">16px</div>
+          </div>
+        </div>
+
+        <div class="tweak-section">
+          <h4>▸ Mock Scenarios</h4>
+          <p style="font-size:11px; color: var(--dim); margin-bottom: 10px; line-height: 1.5;">
+            เลือก scenario ในหน้านั้น ๆ จาก pill ด้านบน — หรือกด "สุ่ม"
+          </p>
+          <button class="btn btn-ghost" style="font-size:12px;" onclick="randomizeAll()">
+            🎲 สุ่ม scenario ทั้งหมด
+          </button>
+        </div>
+
+        <div style="height:20px;"></div>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   CYBERSENSE — single-file prototype
+   ============================================================ */
+
+/* ---------- TWEAK DEFAULTS ---------- */
+const TWEAKS = /*EDITMODE-BEGIN*/{
+  "theme": "dark",
+  "accent": "#00e87a",
+  "accentGlow": "0,232,122",
+  "accentFg": "#001a0a",
+  "fontSize": 16
+}/*EDITMODE-END*/;
+
+/* ---------- MOCK DATA ---------- */
+const SMS_SCENARIOS = [
+  {
+    id: 'th-post',
+    label: 'พัสดุไปรษณีย์ไทย',
+    risk: 94,
+    sender: 'ไปรษณีย์ไทย',
+    text: 'ท่านมีพัสดุตกค้างที่ไปรษณีย์ไทย กรุณายืนยันที่อยู่ภายใน 24 ชม. มิฉะนั้นพัสดุจะถูกส่งคืน คลิก: th-post-verify[.]com',
+    highlights: [
+      { type: 'o', text: 'ไปรษณีย์ไทย' },
+      { type: 'r', text: 'ภายใน 24 ชม.' },
+      { type: 'r', text: 'มิฉะนั้น' },
+      { type: 'y', text: 'th-post-verify[.]com' }
+    ],
+    signals: [
+      { kind: 'bad', tag: 'URGENCY', title: 'สร้างความกดดันเรื่องเวลา', desc: '"ภายใน 24 ชม." เป็นกลยุทธ์เร่งให้รีบไม่ทันคิด' },
+      { kind: 'bad', tag: 'FAKE URL', title: 'URL ปลอมที่เลียนแบบ', desc: 'ของจริงคือ thailandpost.th — โดเมนนี้ใหม่ แค่ 3 วัน' },
+      { kind: 'warn', tag: 'IMPERSONATION', title: 'แอบอ้างหน่วยงาน', desc: 'อ้างตัวเป็นไปรษณีย์ไทย แต่เบอร์ไม่ตรงกับฐานข้อมูล' },
+      { kind: 'bad', tag: 'PHISHING', title: 'พบในฐานข้อมูล Phishing', desc: 'มีการรายงานในฐานข้อมูล 4 แห่ง' }
+    ]
+  },
+  {
+    id: 'bank-otp',
+    label: 'ธนาคารระงับบัญชี',
+    risk: 88,
+    sender: 'KBANK-Alert',
+    text: 'แจ้งเตือน! บัญชีของท่านมีความเสี่ยงผิดปกติ กรุณายืนยันตัวตนด่วน เพื่อป้องกันการระงับบัญชี: kbank-secure[.]xyz/verify',
+    highlights: [
+      { type: 'r', text: 'แจ้งเตือน!' },
+      { type: 'o', text: 'KBANK' },
+      { type: 'r', text: 'ด่วน' },
+      { type: 'r', text: 'ป้องกันการระงับบัญชี' },
+      { type: 'y', text: 'kbank-secure[.]xyz/verify' }
+    ],
+    signals: [
+      { kind: 'bad', tag: 'URGENCY', title: 'คำเร่งด่วน', desc: '"ด่วน" + "ระงับบัญชี" = แพทเทิร์น phishing คลาสสิก' },
+      { kind: 'bad', tag: 'FAKE URL', title: 'โดเมนแปลกปลอม', desc: 'ธนาคารจริงไม่ใช้ .xyz — KBANK ใช้ kasikornbank.com' },
+      { kind: 'warn', tag: 'IMPERSONATION', title: 'ปลอมตัวเป็นธนาคาร', desc: 'ใช้ชื่อ KBANK-Alert แต่ไม่ใช่ผู้ส่งจริง' },
+      { kind: 'bad', tag: 'CTA', title: 'ขอให้ยืนยันตัวตน', desc: 'ธนาคารจริงไม่ขอให้ยืนยันตัวตนผ่าน SMS' }
+    ]
+  },
+  {
+    id: 'safe-otp',
+    label: 'OTP ของจริง (ปลอดภัย)',
+    risk: 6,
+    sender: 'KBANK',
+    text: 'รหัส OTP ของท่านคือ 847293 ใช้ได้ภายใน 3 นาที (อย่าเปิดเผยรหัสนี้ให้ผู้อื่น)',
+    highlights: [],
+    signals: [
+      { kind: 'ok', tag: 'SENDER', title: 'ผู้ส่งตรงกับฐานข้อมูล', desc: 'KBANK เป็น sender ID ที่ลงทะเบียนถูกต้อง' },
+      { kind: 'ok', tag: 'NO URL', title: 'ไม่มีลิงก์น่าสงสัย', desc: 'ข้อความไม่มี URL หรือ CTA ขอข้อมูล' },
+      { kind: 'ok', tag: 'PATTERN', title: 'รูปแบบ OTP มาตรฐาน', desc: 'ตรงกับรูปแบบ OTP ของธนาคารจริง' }
+    ]
+  },
+  {
+    id: 'promo-fake',
+    label: 'โปรโมชันรางวัลปลอม',
+    risk: 79,
+    sender: '0812345678',
+    text: 'ยินดีด้วย! คุณได้รับเงินคืน 5,000 บาท จากเลขสมาชิกของคุณ คลิกรับสิทธิ์ทันที (เหลือ 2 ที่นั่ง): bit.ly/get-cash-th',
+    highlights: [
+      { type: 'r', text: 'ยินดีด้วย!' },
+      { type: 'r', text: 'รับเงินคืน 5,000 บาท' },
+      { type: 'r', text: 'รับสิทธิ์ทันที' },
+      { type: 'r', text: 'เหลือ 2 ที่นั่ง' },
+      { type: 'y', text: 'bit.ly/get-cash-th' }
+    ],
+    signals: [
+      { kind: 'bad', tag: 'BAIT', title: 'เหยื่อล่อด้วยเงินรางวัล', desc: '"เงินคืน 5,000" ที่มาไม่มีที่มาน่าเชื่อถือ' },
+      { kind: 'bad', tag: 'SCARCITY', title: 'สร้างความขาดแคลน', desc: '"เหลือ 2 ที่นั่ง" บีบให้รีบกด' },
+      { kind: 'warn', tag: 'SHORT URL', title: 'Short URL ซ่อนปลายทาง', desc: 'bit.ly ซ่อน destination จริง' },
+      { kind: 'bad', tag: 'UNKNOWN', title: 'เบอร์ไม่รู้จัก', desc: 'ส่งจากเบอร์มือถือ ไม่ใช่ sender ID องค์กร' }
+    ]
+  }
+];
+
+const LINK_SCENARIOS = [
+  {
+    id: 'th-post-fake',
+    label: 'th-post-verify[.]com',
+    url: 'https://th-post-verify.com/confirm?id=TH8842',
+    risk: 96,
+    verdict: 'อันตราย — Phishing Site',
+    type: 'danger',
+    impersonates: 'ไปรษณีย์ไทย',
+    realDomain: 'thailandpost.th',
+    checks: [
+      { kind: 'bad', icon: 'cal', title: 'Domain Age', sub: 'จดทะเบียนเมื่อ 3 วันที่แล้ว', val: '3 วัน' },
+      { kind: 'bad', icon: 'bank', title: 'Brand Impersonation', sub: 'หน้าตาเหมือนไปรษณีย์ไทย 94%', val: '94% match' },
+      { kind: 'warn', icon: 'lock', title: 'SSL Certificate', sub: 'ใช้ self-signed cert ไม่น่าเชื่อถือ', val: 'Self-signed' },
+      { kind: 'bad', icon: 'form', title: 'Form Analysis', sub: 'ขอเลขบัตรประชาชน + ที่อยู่', val: 'ข้อมูลส่วนตัว' },
+      { kind: 'bad', icon: 'globe', title: 'Phishing DB', sub: 'พบใน 4 ฐานข้อมูลสากล', val: '4 matches' }
+    ]
+  },
+  {
+    id: 'kbank-xyz',
+    label: 'kbank-secure[.]xyz',
+    url: 'https://kbank-secure.xyz/verify',
+    risk: 89,
+    verdict: 'อันตราย — Banking Phishing',
+    type: 'danger',
+    impersonates: 'KBANK (กสิกรไทย)',
+    realDomain: 'kasikornbank.com',
+    checks: [
+      { kind: 'bad', icon: 'cal', title: 'Domain Age', sub: 'จดทะเบียนเมื่อ 8 วันที่แล้ว', val: '8 วัน' },
+      { kind: 'bad', icon: 'bank', title: 'Brand Impersonation', sub: 'ใช้โลโก้ KBANK โดยไม่ได้รับอนุญาต', val: 'KBANK' },
+      { kind: 'bad', icon: 'lock', title: 'TLD Suspicious', sub: '.xyz ถูกใช้ใน scam บ่อย', val: '.xyz' },
+      { kind: 'bad', icon: 'form', title: 'Form Analysis', sub: 'ขอ password + PIN ATM', val: 'Credential' },
+      { kind: 'bad', icon: 'globe', title: 'Phishing DB', sub: 'พบใน 6 ฐานข้อมูลสากล', val: '6 matches' }
+    ]
+  },
+  {
+    id: 'short-url',
+    label: 'bit.ly/xyz123',
+    url: 'https://bit.ly/get-cash-th',
+    risk: 62,
+    verdict: 'น่าสงสัย — Short URL',
+    type: 'warn',
+    impersonates: null,
+    realDomain: null,
+    redirectsTo: 'free-cash-promo[.]top',
+    checks: [
+      { kind: 'warn', icon: 'globe', title: 'URL ปลายทาง', sub: 'redirects → free-cash-promo[.]top', val: 'Hidden' },
+      { kind: 'bad', icon: 'cal', title: 'Domain Age', sub: 'ปลายทางใหม่ 2 สัปดาห์', val: '14 วัน' },
+      { kind: 'warn', icon: 'lock', title: 'SSL Certificate', sub: 'มี SSL แต่ออกใหม่', val: 'Valid' },
+      { kind: 'bad', icon: 'form', title: 'Content', sub: 'หน้าให้กรอกข้อมูลส่วนตัวเพื่อรับเงิน', val: 'Suspicious' }
+    ]
+  },
+  {
+    id: 'thailandpost-real',
+    label: 'thailandpost.co.th',
+    url: 'https://www.thailandpost.co.th',
+    risk: 4,
+    verdict: 'ปลอดภัย — เว็บจริง',
+    type: 'safe',
+    impersonates: null,
+    realDomain: null,
+    checks: [
+      { kind: 'ok', icon: 'cal', title: 'Domain Age', sub: 'จดทะเบียนเมื่อ 22 ปีที่แล้ว', val: '22 ปี' },
+      { kind: 'ok', icon: 'bank', title: 'Verified Brand', sub: 'เว็บทางการของไปรษณีย์ไทย', val: 'Official' },
+      { kind: 'ok', icon: 'lock', title: 'SSL Certificate', sub: 'EV SSL ออกโดย DigiCert', val: 'Valid EV' },
+      { kind: 'ok', icon: 'globe', title: 'Reputation', sub: 'ไม่พบในฐานข้อมูล phishing', val: 'Clean' }
+    ]
+  }
+];
+
+const VOICE_SCENARIOS = [
+  {
+    id: 'police',
+    label: '🚨 ตำรวจ/DSI ปลอม',
+    risk: 91,
+    duration: '1:08',
+    fileName: 'recording_call_police.m4a',
+    fileSize: '512 KB',
+    transcript: [
+      { t: '00:02', s: 'สวัสดีครับ ผมเจ้าหน้าที่จาก DSI ตรวจสอบบัญชีของคุณ' },
+      { t: '00:09', s: 'พบว่ามีชื่อคุณเข้าไปเกี่ยวข้องกับขบวนการฟอกเงิน' },
+      { t: '00:18', s: 'ถ้าคุณไม่อยากถูกอายัดบัญชี ต้องโอนเงินมาตรวจสอบ' },
+      { t: '00:29', s: 'ที่บัญชีกลางของกรมสอบสวนคดีพิเศษภายใน 30 นาที' },
+      { t: '00:42', s: 'ห้ามวางสาย ห้ามโทรหาใครเด็ดขาด ไม่งั้นจะมีหมายจับ' },
+      { t: '00:58', s: 'กรุณายืนยันชื่อและเลขบัตรประชาชนของคุณก่อนครับ' }
+    ],
+    signals: [
+      { kind: 'bad', tag: 'IMPERSONATION', title: 'แอบอ้างเจ้าหน้าที่', desc: 'อ้างเป็น DSI — หน่วยงานจริงไม่โทรขอเงินทาง phone' },
+      { kind: 'bad', tag: 'URGENCY', title: 'สร้างความกดดัน', desc: '"30 นาที" + "หมายจับ" บีบให้ตัดสินใจเร็ว' },
+      { kind: 'bad', tag: 'ISOLATION', title: 'ตัดการติดต่อ', desc: '"ห้ามวางสาย ห้ามโทรหาใคร" = pattern scam ชัดเจน' },
+      { kind: 'bad', tag: 'MONEY', title: 'ขอให้โอนเงิน', desc: 'หน่วยงานราชการไม่เคยขอให้โอนเงินมาตรวจสอบ' },
+      { kind: 'bad', tag: 'PII', title: 'ขอข้อมูลส่วนตัว', desc: 'ขอเลขบัตรประชาชน — ข้อมูลที่ใช้ปลอมตัวได้' }
+    ],
+    callerName: 'หน่วยงาน DSI',
+    callerNumber: '+66 02-xxx-xxxx',
+    callerLabel: 'อาจเป็นมิจฉาชีพ'
+  },
+  {
+    id: 'bank-call',
+    label: '🏦 แก๊งคอลธนาคารปลอม',
+    risk: 84,
+    duration: '0:55',
+    fileName: 'recording_call_bank.m4a',
+    fileSize: '438 KB',
+    transcript: [
+      { t: '00:01', s: 'สวัสดีค่ะ ที่นี่ฝ่ายความปลอดภัยของธนาคารกสิกร' },
+      { t: '00:08', s: 'ระบบของเราตรวจพบการทำธุรกรรมผิดปกติในบัญชีของท่าน' },
+      { t: '00:18', s: 'มีคนพยายามโอนเงินออก 50,000 บาทเมื่อสักครู่' },
+      { t: '00:27', s: 'เพื่อยับยั้ง ต้องยืนยันรหัส OTP ที่จะส่งไปนะคะ' },
+      { t: '00:38', s: 'กรุณาอ่านรหัสที่ได้รับให้ดิฉันบันทึกค่ะ' },
+      { t: '00:48', s: 'ห้ามตัดสาย ห้ามใครเข้ามาขัดจังหวะนะคะ' }
+    ],
+    signals: [
+      { kind: 'bad', tag: 'OTP STEAL', title: 'ขอรหัส OTP', desc: 'ธนาคารจริงไม่เคยขอ OTP ทางโทรศัพท์' },
+      { kind: 'bad', tag: 'IMPERSONATION', title: 'ปลอมตัวเป็นธนาคาร', desc: 'อ้างฝ่ายความปลอดภัยกสิกร — ของจริงไม่โทรเชิงรุกแบบนี้' },
+      { kind: 'bad', tag: 'FAKE THREAT', title: 'อ้างภัยเทียม', desc: '"โอน 50,000 บาท" สร้างเรื่องให้ตกใจ' },
+      { kind: 'bad', tag: 'ISOLATION', title: 'ตัดการสื่อสาร', desc: '"ห้ามตัดสาย" — ห้ามให้คนรอบข้างเตือน' }
+    ],
+    callerName: 'ธนาคารกสิกรไทย',
+    callerNumber: '+66 02-273-xxxx',
+    callerLabel: 'ระดับเสี่ยงสูง'
+  },
+  {
+    id: 'normal-call',
+    label: '✓ สายปกติ (ปลอดภัย)',
+    risk: 8,
+    duration: '0:42',
+    fileName: 'recording_call_normal.m4a',
+    fileSize: '356 KB',
+    transcript: [
+      { t: '00:01', s: 'หวัดดีครับพี่ ผมเอกที่ส่งของให้พี่เมื่อวาน' },
+      { t: '00:08', s: 'อยากแจ้งว่าวันนี้พี่อาจได้พัสดุประมาณบ่ายสามครับ' },
+      { t: '00:17', s: 'ถ้าพี่ไม่อยู่ผมจะฝากไว้กับ รปภ. ตามปกตินะครับ' },
+      { t: '00:25', s: 'พี่สะดวกตรงไหนผมจัดให้ตามนั้น ไม่มีอะไรเร่งด่วนครับ' },
+      { t: '00:35', s: 'ขอบคุณครับพี่ ไว้เจอกันบ่ายนี้ครับ' }
+    ],
+    signals: [
+      { kind: 'ok', tag: 'CONTEXT', title: 'มีบริบทต่อเนื่อง', desc: 'อ้างถึงงานก่อนหน้าที่จับต้องได้ ไม่ใช่เรื่องลอย ๆ' },
+      { kind: 'ok', tag: 'NO URGENCY', title: 'ไม่เร่งด่วน', desc: 'ไม่มีคำกดดัน ไม่ขู่ ไม่ขอข้อมูล' },
+      { kind: 'ok', tag: 'NO MONEY', title: 'ไม่ขอเงิน/ข้อมูล', desc: 'ไม่ขอ OTP ไม่ขอเลขบัตร ไม่ขอโอน' }
+    ],
+    callerName: 'พี่เอก (ขนส่ง)',
+    callerNumber: '+66 81-xxx-xxxx',
+    callerLabel: 'เบอร์ปลอดภัย'
+  }
+];
+
+/* ---------- STATE ---------- */
+let currentScreen = 'home';
+let currentVoiceTab = 'upload';
+let selectedSmsScenario = null;
+let selectedLinkScenario = null;
+let selectedVoiceScenario = null;
+let selectedCallScenario = null;
+let history = [];
+let stats = { count: 0, blocked: 0 };
+
+/* ---------- INIT ---------- */
+function init() {
+  applyTweaks();
+  renderScenarioPills();
+  renderCallScenarios();
+  loadHistory();
+  startClock();
+  bindTweaks();
+  bindDropzone();
+  // First incoming call scenario default
+  selectedCallScenario = VOICE_SCENARIOS[0];
+}
+
+function startClock() {
+  const tick = () => {
+    const d = new Date();
+    const h = String(d.getHours()).padStart(2,'0');
+    const m = String(d.getMinutes()).padStart(2,'0');
+    const t = `${h}:${m}`;
+    const cl = document.getElementById('clock'); if (cl) cl.textContent = t;
+    const cl2 = document.getElementById('call-clock'); if (cl2) cl2.textContent = t;
+  };
+  tick();
+  setInterval(tick, 30000);
+}
+
+/* ---------- SCREEN NAV ---------- */
+function goTo(name) {
+  currentScreen = name;
+  document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+  const screenEl = document.getElementById('screen-' + name);
+  if (screenEl) {
+    screenEl.style.display = 'flex';
+    const body = screenEl.querySelector('.scr-body');
+    if (body) body.scrollTop = 0;
+  }
+  document.querySelectorAll('.nav-item').forEach(n => {
+    n.classList.toggle('active', n.dataset.screen === name);
+  });
+  // refresh history when going home
+  if (name === 'home') renderHistory();
+}
+
+/* ---------- SCENARIO PILLS ---------- */
+function renderScenarioPills() {
+  const sms = document.getElementById('sms-scenarios');
+  sms.innerHTML = '';
+  SMS_SCENARIOS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sc-pill';
+    b.textContent = s.label;
+    b.onclick = () => selectSms(s);
+    sms.appendChild(b);
+  });
+
+  const link = document.getElementById('link-scenarios');
+  link.innerHTML = '';
+  LINK_SCENARIOS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sc-pill';
+    b.textContent = s.label;
+    b.onclick = () => selectLink(s);
+    link.appendChild(b);
+  });
+
+  const voice = document.getElementById('voice-scenarios');
+  voice.innerHTML = '';
+  VOICE_SCENARIOS.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'sc-pill';
+    b.textContent = s.label;
+    b.onclick = () => selectVoice(s);
+    voice.appendChild(b);
+  });
+}
+
+function renderCallScenarios() {
+  const wrap = document.getElementById('call-scenarios');
+  wrap.innerHTML = '';
+  VOICE_SCENARIOS.forEach((s, i) => {
+    const b = document.createElement('button');
+    b.className = 'scen-list-item' + (i === 0 ? ' active' : '');
+    b.style.cssText = 'text-align:left; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; transition: var(--t); display: block; width:100%;';
+    if (i === 0) {
+      b.style.borderColor = 'rgba(var(--accent-glow), 0.4)';
+      b.style.background = 'rgba(var(--accent-glow), 0.08)';
+    }
+    const riskColor = s.risk >= 70 ? 'var(--red)' : s.risk >= 40 ? 'var(--yellow)' : 'var(--accent)';
+    b.innerHTML = `
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:600;margin-bottom:2px;">${s.label}</div>
+          <div style="font-size:11px;color:var(--text2);">${s.callerName}</div>
+        </div>
+        <div style="font-family:var(--font-mono);font-size:14px;font-weight:700;color:${riskColor};">${s.risk}%</div>
+      </div>
+    `;
+    b.onclick = () => {
+      selectedCallScenario = s;
+      [...wrap.children].forEach(c => {
+        c.style.borderColor = 'var(--border)';
+        c.style.background = 'var(--surface)';
+      });
+      b.style.borderColor = 'rgba(var(--accent-glow), 0.4)';
+      b.style.background = 'rgba(var(--accent-glow), 0.08)';
+    };
+    wrap.appendChild(b);
+  });
+}
+
+/* ---------- SMS ---------- */
+function selectSms(s) {
+  selectedSmsScenario = s;
+  document.getElementById('sms-input').value = s.text;
+  // mark pill
+  const pills = document.querySelectorAll('#sms-scenarios .sc-pill');
+  pills.forEach((p, i) => p.classList.toggle('active', SMS_SCENARIOS[i].id === s.id));
+  document.getElementById('sms-result').innerHTML = '';
+}
+
+function clearSmsInput() {
+  document.getElementById('sms-input').value = '';
+  selectedSmsScenario = null;
+  document.querySelectorAll('#sms-scenarios .sc-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('sms-result').innerHTML = '';
+}
+
+async function analyzeSms() {
+  const text = document.getElementById('sms-input').value.trim();
+  if (!text) {
+    alert('กรุณาวางข้อความ SMS ก่อน');
+    return;
+  }
+  const result = document.getElementById('sms-result');
+  result.innerHTML = '';
+  const loading = document.getElementById('sms-loading');
+  loading.classList.remove('hide');
+  loading.classList.add('show');
+
+  const sub = document.getElementById('sms-substep');
+  const steps = ['› TOKENIZE TH', '› BERT ANALYSIS', '› URL CHECK', '› RISK SCORE'];
+  for (let i = 0; i < steps.length; i++) {
+    sub.textContent = steps[i];
+    await sleep(420);
+  }
+
+  loading.classList.add('hide');
+  // Pick scenario; if none selected, fuzzy match by content keywords
+  const sc = selectedSmsScenario || matchSms(text);
+  renderSmsResult(sc, text);
+
+  recordHistory({
+    type: 'sms',
+    title: sc.sender + ' — ' + (sc.text.slice(0, 28)) + '…',
+    risk: sc.risk
+  });
+}
+
+function matchSms(text) {
+  const t = text.toLowerCase();
+  if (/พัสดุ|ไปรษณีย์|post/.test(t)) return SMS_SCENARIOS[0];
+  if (/บัญชี|otp|kbank|ธนาคาร|ระงับ/.test(t) && !/รหัส otp/.test(t)) return SMS_SCENARIOS[1];
+  if (/รหัส otp|ใช้ได้ภายใน|otp ของท่าน/.test(t)) return SMS_SCENARIOS[2];
+  if (/ยินดี|รางวัล|เงินคืน|รับสิทธิ์|bit\.ly/.test(t)) return SMS_SCENARIOS[3];
+  // default: medium risk synthetic
+  return {
+    risk: 55,
+    sender: 'ไม่ทราบที่มา',
+    text,
+    highlights: [],
+    signals: [
+      { kind: 'warn', tag: 'AI ANALYSIS', title: 'ไม่พบ pattern แน่ชัด', desc: 'ข้อความนี้ไม่ตรงกับ scam pattern ที่รู้จัก แต่มีลักษณะน่าสงสัยบางส่วน' },
+      { kind: 'warn', tag: 'GENERIC', title: 'ตรวจสอบเพิ่มเติม', desc: 'แนะนำให้ตรวจสอบกับแหล่งจริงก่อนตอบโต้' }
+    ]
+  };
+}
+
+function renderSmsResult(sc, originalText) {
+  const klass = sc.risk >= 70 ? 'r-high' : sc.risk >= 40 ? 'r-mid' : 'r-low';
+  const verdict = sc.risk >= 70 ? '⚠️ อันตรายสูง — สแกม' : sc.risk >= 40 ? 'น่าสงสัย' : '✓ ปลอดภัย';
+  const eyebrow = sc.risk >= 70 ? 'HIGH RISK · SCAM' : sc.risk >= 40 ? 'MEDIUM RISK' : 'LOW RISK';
+
+  // build highlighted text
+  let body = sc.text || originalText;
+  if (sc.highlights && sc.highlights.length) {
+    sc.highlights.forEach(h => {
+      const safe = h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      body = body.replace(new RegExp(safe), `<span class="hl-${h.type}">${h.text}</span>`);
+    });
+  }
+
+  let html = `
+    <div class="result-card ${klass}">
+      <div class="verdict-row">
+        <div class="verdict-label">
+          <div class="v-eyebrow">${eyebrow}</div>
+          <div class="v-title">${verdict}</div>
+        </div>
+        <div class="risk-num">${sc.risk}<small>%</small></div>
+      </div>
+      <div class="risk-track-wrap">
+        <div class="risk-track"><div class="risk-prog" style="width:0%"></div></div>
+        <div class="risk-axis"><span>ปลอดภัย</span><span>กลาง</span><span>อันตราย</span></div>
+      </div>
+    </div>
+
+    <div class="xai-block">
+      <div class="xai-head">▸ ข้อความที่ AI วิเคราะห์ (XAI)</div>
+      <div class="xai-quote">${body}</div>
+    </div>
+
+    <div class="xai-block">
+      <div class="xai-head">▸ สัญญาณที่ AI ตรวจพบ</div>
+      <div class="signal-list">
+        ${sc.signals.map(s => `
+          <div class="sig">
+            <div class="sig-ico ${s.kind}">${sigIcon(s.kind)}</div>
+            <div class="sig-body">
+              <div class="sig-title">${s.title}</div>
+              <div class="sig-desc">${s.desc}</div>
+            </div>
+            <div class="sig-tag">${s.tag}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  if (sc.risk >= 70) {
+    html += `
+      <div class="recommend-card">
+        <div class="rc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg></div>
+        <div>
+          <h5>คำแนะนำ</h5>
+          <p>อย่ากดลิงก์ใน SMS นี้ · อย่าตอบกลับ · ลบทิ้งทันที — หากเป็นเรื่องสำคัญ ติดต่อหน่วยงานจริงผ่านช่องทางทางการเท่านั้น</p>
+        </div>
+      </div>
+      <div style="padding: 14px 18px 0;">
+        <button class="btn btn-danger" onclick="showTakeover('sms', ${sc.risk}, ${JSON.stringify(sc.sender || '').replace(/"/g, '&quot;')})">
+          🚨 ดูรายละเอียดเต็มจอ
+        </button>
+      </div>
+    `;
+  }
+
+  document.getElementById('sms-result').innerHTML = html;
+  // Animate progress bar
+  setTimeout(() => {
+    const bar = document.querySelector('#sms-result .risk-prog');
+    if (bar) bar.style.width = sc.risk + '%';
+  }, 60);
+}
+
+function sigIcon(kind) {
+  if (kind === 'ok') return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+}
+
+/* ---------- LINK ---------- */
+function selectLink(s) {
+  selectedLinkScenario = s;
+  document.getElementById('link-input').value = s.url;
+  const pills = document.querySelectorAll('#link-scenarios .sc-pill');
+  pills.forEach((p, i) => p.classList.toggle('active', LINK_SCENARIOS[i].id === s.id));
+  document.getElementById('link-result').innerHTML = '';
+}
+
+async function scanLink() {
+  const url = document.getElementById('link-input').value.trim();
+  if (!url) { alert('กรุณาวาง URL ก่อน'); return; }
+  const result = document.getElementById('link-result');
+  result.innerHTML = '';
+  const loading = document.getElementById('link-loading');
+  loading.classList.remove('hide');
+  loading.classList.add('show');
+
+  const sub = document.getElementById('link-substep');
+  const steps = ['› DOMAIN LOOKUP', '› SSL CHECK', '› BRAND MATCH', '› PHISH DB'];
+  for (let i = 0; i < steps.length; i++) {
+    sub.textContent = steps[i];
+    await sleep(450);
+  }
+  loading.classList.add('hide');
+
+  const sc = selectedLinkScenario || matchLink(url);
+  renderLinkResult(sc, url);
+
+  recordHistory({
+    type: 'link',
+    title: sc.url,
+    risk: sc.risk
+  });
+}
+
+function matchLink(url) {
+  const u = url.toLowerCase();
+  if (/post|ไปรษณีย์/.test(u) && !/thailandpost\.co\.th|thailandpost\.th/.test(u)) return LINK_SCENARIOS[0];
+  if (/kbank|kasikorn/.test(u) && !/kasikornbank\.com/.test(u)) return LINK_SCENARIOS[1];
+  if (/bit\.ly|t\.co|tinyurl/.test(u)) return LINK_SCENARIOS[2];
+  if (/thailandpost\.co\.th|google\.com|facebook\.com/.test(u)) return LINK_SCENARIOS[3];
+  return {
+    risk: 35,
+    url,
+    verdict: 'ไม่พบในฐานข้อมูล',
+    type: 'warn',
+    checks: [
+      { kind: 'warn', icon: 'globe', title: 'Unknown URL', sub: 'ไม่อยู่ในฐานข้อมูล whitelist หรือ phishing', val: 'New' }
+    ]
+  };
+}
+
+function checkIcon(kind) {
+  const map = {
+    cal: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    bank: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg>`,
+    lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+    form: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="13" y2="17"/></svg>`,
+    globe: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15 15 0 0 1 4 10 15 15 0 0 1-4 10 15 15 0 0 1-4-10 15 15 0 0 1 4-10z"/></svg>`
+  };
+  return map[kind] || map.globe;
+}
+
+function renderLinkResult(sc, originalUrl) {
+  const klass = sc.risk >= 70 ? 'r-high' : sc.risk >= 40 ? 'r-mid' : 'r-low';
+  const verdictLabel = sc.verdict || (sc.risk >= 70 ? 'อันตราย — Phishing' : sc.risk >= 40 ? 'น่าสงสัย' : '✓ ปลอดภัย');
+  const eyebrow = sc.risk >= 70 ? 'HIGH RISK · DO NOT VISIT' : sc.risk >= 40 ? 'MEDIUM RISK · CAUTION' : 'LOW RISK · SAFE';
+
+  let html = `
+    <div class="result-card ${klass}">
+      <div class="verdict-row">
+        <div class="verdict-label">
+          <div class="v-eyebrow">${eyebrow}</div>
+          <div class="v-title">${verdictLabel}</div>
+        </div>
+        <div class="risk-num">${sc.risk}<small>%</small></div>
+      </div>
+      <div class="risk-track-wrap">
+        <div class="risk-track"><div class="risk-prog" style="width:0%"></div></div>
+        <div class="risk-axis"><span>ปลอดภัย</span><span>กลาง</span><span>อันตราย</span></div>
+      </div>
+      <div style="margin-top: 12px; padding: 8px 10px; background: rgba(0,0,0,0.2); border-radius: 8px; font-family: var(--font-mono); font-size: 11px; color: var(--text2); word-break: break-all;">
+        ${originalUrl || sc.url}
+      </div>
+    </div>
+
+    <div class="xai-block">
+      <div class="xai-head">▸ ผลการสแกนใน Sandbox</div>
+      <div class="signal-list">
+        ${sc.checks.map(c => `
+          <div class="sig">
+            <div class="sig-ico ${c.kind}">${checkIcon(c.icon)}</div>
+            <div class="sig-body">
+              <div class="sig-title">${c.title}</div>
+              <div class="sig-desc">${c.sub}</div>
+            </div>
+            <div class="sig-tag" style="color: ${c.kind === 'bad' ? 'var(--red)' : c.kind === 'warn' ? 'var(--yellow)' : 'var(--accent)'}">${c.val}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  if (sc.impersonates) {
+    html += `
+      <div class="xai-block">
+        <div class="xai-head">▸ Visual Comparison</div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; padding: 0 18px;">
+          <div style="background: rgba(var(--accent-glow), 0.06); border: 1px solid rgba(var(--accent-glow), 0.2); border-radius: 10px; padding: 14px; text-align:center;">
+            <div style="font-size:9px; color:var(--dim); font-family: var(--font-mono); letter-spacing:1px; margin-bottom: 6px;">เว็บจริง</div>
+            <div style="height: 50px; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom:8px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11"/></svg>
+            </div>
+            <div style="font-size:11px; font-weight:600; color: var(--accent); margin-bottom: 2px;">${sc.impersonates}</div>
+            <div style="font-family:var(--font-mono); font-size:9px; color: var(--accent); letter-spacing:0.5px;">${sc.realDomain}</div>
+            <div style="margin-top: 6px; font-size: 10px; color: var(--accent);">✓ ของแท้</div>
+          </div>
+          <div style="background: rgba(var(--red-glow), 0.06); border: 1px solid rgba(var(--red-glow), 0.2); border-radius: 10px; padding: 14px; text-align:center;">
+            <div style="font-size:9px; color:var(--dim); font-family: var(--font-mono); letter-spacing:1px; margin-bottom: 6px;">เว็บปลอม</div>
+            <div style="height: 50px; display:flex; align-items:center; justify-content:center; background: rgba(0,0,0,0.2); border-radius: 6px; margin-bottom:8px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11"/></svg>
+            </div>
+            <div style="font-size:11px; font-weight:600; color: var(--red); margin-bottom: 2px;">${sc.impersonates}</div>
+            <div style="font-family:var(--font-mono); font-size:9px; color: var(--red); letter-spacing:0.5px; word-break:break-all;">${(sc.url||'').replace(/^https?:\/\//, '').replace(/\/.*/, '')}</div>
+            <div style="margin-top: 6px; font-size: 10px; color: var(--red);">⚠️ ปลอม 94%</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (sc.risk >= 70) {
+    html += `
+      <div style="padding: 18px 18px 0;">
+        <button class="btn btn-danger" onclick="showTakeover('link', ${sc.risk}, ${JSON.stringify(sc.url||'').replace(/"/g, '&quot;')}, ${JSON.stringify(sc.id||'').replace(/"/g, '&quot;')})">
+          🚨 บล็อกและดูรายละเอียดเต็มจอ
+        </button>
+      </div>
+    `;
+  }
+
+  document.getElementById('link-result').innerHTML = html;
+  setTimeout(() => {
+    const bar = document.querySelector('#link-result .risk-prog');
+    if (bar) bar.style.width = sc.risk + '%';
+  }, 60);
+}
+
+/* ---------- VOICE ---------- */
+function switchVoiceTab(tab) {
+  currentVoiceTab = tab;
+  document.querySelectorAll('#voice-tabs .tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  document.getElementById('voice-upload').classList.toggle('hide', tab !== 'upload');
+  document.getElementById('voice-call').classList.toggle('hide', tab !== 'call');
+}
+
+function pickFile() {
+  document.getElementById('audio-file').click();
+}
+
+function bindDropzone() {
+  const dz = document.getElementById('dropzone');
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.remove('drag');
+  }));
+  dz.addEventListener('drop', e => {
+    if (e.dataTransfer.files.length) {
+      onFilePicked(e.dataTransfer.files[0]);
+    }
+  });
+}
+
+function onFilePicked(file) {
+  if (!file) {
+    const fEl = document.getElementById('audio-file');
+    if (fEl.files.length === 0) return;
+    file = fEl.files[0];
+  }
+  // Use real filename, but pre-pick a scenario based on guess (default to first scam)
+  if (!selectedVoiceScenario) selectedVoiceScenario = VOICE_SCENARIOS[0];
+  showFileRow(file.name, formatBytes(file.size));
+}
+
+function showFileRow(name, size) {
+  const row = document.getElementById('voice-file-row');
+  row.classList.remove('hide');
+  row.innerHTML = `
+    <div class="file-row">
+      <div class="file-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+      </div>
+      <div class="file-meta">
+        <div class="file-name">${name}</div>
+        <div class="file-size">${size} · พร้อมวิเคราะห์</div>
+      </div>
+      <div class="wave">
+        ${Array.from({length: 6}).map((_, i) => `<span style="animation-delay:${i*0.12}s"></span>`).join('')}
+      </div>
+    </div>
+  `;
+  document.getElementById('voice-action-row').style.display = 'flex';
+}
+
+function selectVoice(s) {
+  selectedVoiceScenario = s;
+  document.querySelectorAll('#voice-scenarios .sc-pill').forEach((p, i) => {
+    p.classList.toggle('active', VOICE_SCENARIOS[i].id === s.id);
+  });
+  showFileRow(s.fileName, s.fileSize + ' · ' + s.duration);
+  document.getElementById('voice-result').innerHTML = '';
+}
+
+function formatBytes(n) {
+  if (!n) return '—';
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(1) + ' MB';
+}
+
+async function analyzeVoice() {
+  if (!selectedVoiceScenario) selectedVoiceScenario = VOICE_SCENARIOS[0];
+  const sc = selectedVoiceScenario;
+  document.getElementById('voice-result').innerHTML = '';
+  const loading = document.getElementById('voice-loading');
+  loading.classList.remove('hide');
+  loading.classList.add('show');
+
+  const subText = document.getElementById('voice-loading-text');
+  const sub = document.getElementById('voice-substep');
+
+  // Stage 1: STT
+  subText.textContent = 'กำลังถอดเสียงเป็นข้อความไทย...';
+  const sttSteps = ['› SPEECH-TO-TEXT', '› DENOISE', '› DIARIZATION', '› THAI ASR'];
+  for (let i = 0; i < sttSteps.length; i++) {
+    sub.textContent = sttSteps[i];
+    await sleep(380);
+  }
+
+  // Stage 2: Pattern analysis
+  subText.textContent = 'AI วิเคราะห์รูปแบบการหลอกลวง...';
+  const aiSteps = ['› SCAM PATTERN', '› SOCIAL ENG.', '› INTENT ANALYSIS', '› RISK SCORE'];
+  for (let i = 0; i < aiSteps.length; i++) {
+    sub.textContent = aiSteps[i];
+    await sleep(380);
+  }
+
+  loading.classList.add('hide');
+  renderVoiceResult(sc);
+
+  recordHistory({
+    type: 'voice',
+    title: sc.callerName + ' · ' + sc.duration,
+    risk: sc.risk
+  });
+}
+
+function renderVoiceResult(sc) {
+  const klass = sc.risk >= 70 ? 'r-high' : sc.risk >= 40 ? 'r-mid' : 'r-low';
+  const verdict = sc.risk >= 70 ? '⚠️ น่าจะเป็นมิจฉาชีพ' : sc.risk >= 40 ? 'น่าสงสัย' : '✓ สายปกติ';
+  const eyebrow = sc.risk >= 70 ? 'HIGH RISK · SCAM CALL' : sc.risk >= 40 ? 'MEDIUM RISK' : 'LOW RISK · SAFE';
+
+  let html = `
+    <div class="result-card ${klass}">
+      <div class="verdict-row">
+        <div class="verdict-label">
+          <div class="v-eyebrow">${eyebrow}</div>
+          <div class="v-title">${verdict}</div>
+        </div>
+        <div class="risk-num">${sc.risk}<small>%</small></div>
+      </div>
+      <div class="risk-track-wrap">
+        <div class="risk-track"><div class="risk-prog" style="width:0%"></div></div>
+        <div class="risk-axis"><span>ปลอดภัย</span><span>กลาง</span><span>อันตราย</span></div>
+      </div>
+    </div>
+
+    <div class="transcript">
+      <div class="transcript-head">
+        <span class="lbl">▸ Transcript ภาษาไทย</span>
+        <span style="font-family: var(--font-mono); font-size: 10px; color: var(--dim);">${sc.duration}</span>
+      </div>
+      <div class="transcript-body">
+        ${sc.transcript.map(t => `
+          <div class="tr-line">
+            <div class="tr-time">${t.t}</div>
+            <div class="tr-text">${t.s}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <div class="xai-block">
+      <div class="xai-head">▸ สัญญาณ Scam Pattern ที่ AI พบ</div>
+      <div class="signal-list">
+        ${sc.signals.map(s => `
+          <div class="sig">
+            <div class="sig-ico ${s.kind}">${sigIcon(s.kind)}</div>
+            <div class="sig-body">
+              <div class="sig-title">${s.title}</div>
+              <div class="sig-desc">${s.desc}</div>
+            </div>
+            <div class="sig-tag">${s.tag}</div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  if (sc.risk >= 70) {
+    html += `
+      <div class="recommend-card">
+        <div class="rc-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/></svg></div>
+        <div>
+          <h5>คำแนะนำ</h5>
+          <p>วางสายทันที · อย่าโอนเงิน · อย่าให้ข้อมูลส่วนตัว — หากสงสัย ติดต่อหน่วยงานที่ถูกอ้างถึงด้วยตัวเอง</p>
+        </div>
+      </div>
+    `;
+  }
+
+  document.getElementById('voice-result').innerHTML = html;
+  setTimeout(() => {
+    const bar = document.querySelector('#voice-result .risk-prog');
+    if (bar) bar.style.width = sc.risk + '%';
+  }, 60);
+}
+
+/* ---------- INCOMING CALL OVERLAY ---------- */
+let callTimer = null;
+let callTimerSec = 0;
+
+function startIncomingCall() {
+  if (!selectedCallScenario) selectedCallScenario = VOICE_SCENARIOS[0];
+  const sc = selectedCallScenario;
+  const overlay = document.getElementById('call-overlay');
+  overlay.dataset.state = 'incoming';
+  overlay.classList.add('show');
+
+  document.getElementById('call-name').textContent = sc.callerName;
+  document.getElementById('call-number').textContent = sc.callerNumber;
+  document.getElementById('call-label').textContent = 'สายเรียกเข้า';
+
+  const susp = document.getElementById('call-susp');
+  if (sc.risk >= 70) {
+    susp.style.display = 'inline-flex';
+    susp.innerHTML = '<span class="dot"></span> อาจเป็นมิจฉาชีพ';
+  } else if (sc.risk >= 40) {
+    susp.style.display = 'inline-flex';
+    susp.style.background = 'rgba(255,176,46,0.15)';
+    susp.style.borderColor = 'rgba(255,176,46,0.4)';
+    susp.style.color = '#ffd47a';
+    susp.innerHTML = '<span class="dot" style="background:var(--yellow)"></span> ระวัง';
+  } else {
+    susp.style.display = 'none';
+  }
+
+  document.getElementById('call-rec').classList.remove('show');
+  document.getElementById('live-panel').classList.remove('show');
+  document.getElementById('live-feed').innerHTML = '';
+  document.getElementById('call-avatar-content').innerHTML = '?';
+}
+
+function answerCall() {
+  const overlay = document.getElementById('call-overlay');
+  overlay.dataset.state = 'answered';
+  document.getElementById('call-rec').classList.add('show');
+  document.getElementById('call-label').textContent = 'กำลังสนทนา';
+  callTimerSec = 0;
+  document.getElementById('call-timer').textContent = '00:00';
+  callTimer = setInterval(() => {
+    callTimerSec++;
+    const m = String(Math.floor(callTimerSec/60)).padStart(2,'0');
+    const s = String(callTimerSec%60).padStart(2,'0');
+    document.getElementById('call-timer').textContent = `${m}:${s}`;
+  }, 1000);
+
+  // Show AI eyes during call
+  document.getElementById('call-avatar-content').innerHTML = '<div class="ai-eyes"><span></span><span></span></div>';
+
+  // Start AI live analysis after a short delay
+  setTimeout(runLiveAnalysis, 1200);
+}
+
+async function runLiveAnalysis() {
+  const sc = selectedCallScenario;
+  const panel = document.getElementById('live-panel');
+  const feed = document.getElementById('live-feed');
+  const stage = document.getElementById('live-stage');
+  const bar = document.getElementById('live-bar');
+  const pct = document.getElementById('live-pct');
+  panel.classList.add('show');
+  feed.innerHTML = '';
+
+  // Build live feed events from transcript + signals
+  const events = [];
+  // 4 transcript lines
+  sc.transcript.slice(0, 4).forEach((t, i) => {
+    events.push({ time: t.t, type: 'transcript', text: '"' + t.s + '"', pct: 18 + i * 14 });
+  });
+  // signals
+  sc.signals.slice(0, 3).forEach((s, i) => {
+    events.push({ time: '', type: 'signal', text: '⚠ พบ: ' + s.title, pct: 78 + i * 7 });
+  });
+
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
+    stage.textContent = i < 4 ? 'ถอดเสียง...' : 'วิเคราะห์ scam pattern...';
+    bar.style.width = ev.pct + '%';
+    pct.textContent = ev.pct + '%';
+
+    const line = document.createElement('div');
+    line.className = 'feed-line ' + (ev.type === 'signal' ? 'alert' : '');
+    line.innerHTML = `<span class="feed-time">${ev.time || '——'}</span><span>${ev.text}</span>`;
+    feed.appendChild(line);
+    feed.scrollTop = feed.scrollHeight;
+
+    await sleep(900);
+  }
+
+  // Final
+  stage.textContent = 'สรุปผล';
+  bar.style.width = '100%';
+  pct.textContent = '100%';
+  await sleep(700);
+
+  // Show result takeover
+  endCall(true);
+}
+
+function endCall(showResult = false) {
+  if (callTimer) clearInterval(callTimer);
+  callTimer = null;
+  const overlay = document.getElementById('call-overlay');
+  overlay.classList.remove('show');
+  overlay.dataset.state = 'incoming';
+
+  if (showResult && selectedCallScenario) {
+    showTakeover('call', selectedCallScenario.risk, selectedCallScenario.callerName, selectedCallScenario.id);
+    recordHistory({
+      type: 'call',
+      title: selectedCallScenario.callerName,
+      risk: selectedCallScenario.risk
+    });
+  }
+}
+
+/* ---------- FULL-SCREEN TAKEOVER ---------- */
+function showTakeover(kind, risk, target, scId) {
+  const t = document.getElementById('takeover');
+  const isSafe = risk < 40;
+  const klass = isSafe ? 'safe' : 'danger';
+  t.className = 'takeover show ' + klass;
+
+  let label, title, sub, ico, valueRow = '';
+  if (kind === 'sms') {
+    label = 'SCAM SMS DETECTED';
+    title = 'หยุด! SMS นี้น่าจะเป็นสแกม';
+    sub = 'CyberSense ตรวจพบรูปแบบการหลอกลวงในข้อความนี้';
+    ico = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
+    valueRow = `<div class="takeover-url">From: ${target}</div>`;
+  } else if (kind === 'link') {
+    if (isSafe) {
+      label = 'SAFE TO VISIT';
+      title = '✓ เว็บนี้ปลอดภัย';
+      sub = 'CyberSense ตรวจสอบเว็บนี้แล้ว ไม่พบความเสี่ยง';
+      ico = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v7c0 5 3.5 8.5 8 10 4.5-1.5 8-5 8-10V5l-8-3z"/><path d="M9 12l2 2 4-4"/></svg>`;
+    } else {
+      label = 'PHISHING SITE BLOCKED';
+      title = 'หยุด! เว็บนี้อันตราย';
+      sub = 'AI เข้าไปสำรวจเว็บแทนคุณแล้ว — พบว่าเป็น phishing site';
+      ico = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+    }
+    valueRow = `<div class="takeover-url">${target}</div>`;
+  } else if (kind === 'call') {
+    label = 'SCAM CALL DETECTED';
+    title = 'สายนี้น่าจะเป็นมิจฉาชีพ';
+    sub = 'AI วิเคราะห์เนื้อหาสายเรียกเข้านี้แล้ว — พบรูปแบบ Social Engineering';
+    ico = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+    valueRow = `<div class="takeover-url">From: ${target}</div>`;
+  }
+
+  // Find scenario for additional checks
+  let checks = [];
+  if (kind === 'link') {
+    const sc = LINK_SCENARIOS.find(s => s.id === scId);
+    if (sc) checks = sc.checks;
+  } else if (kind === 'call') {
+    const sc = VOICE_SCENARIOS.find(s => s.id === scId);
+    if (sc) checks = sc.signals.slice(0, 4).map(s => ({
+      kind: s.kind, icon: 'globe', title: s.title, sub: s.desc, val: s.tag
+    }));
+  } else if (kind === 'sms') {
+    // synthesize
+    checks = [
+      { kind: 'bad', icon: 'globe', title: 'Risk Score', sub: 'AI ประเมินความเสี่ยง', val: risk + '%' },
+      { kind: 'bad', icon: 'globe', title: 'Pattern Match', sub: 'พบ scam pattern', val: 'Phishing' }
+    ];
+  }
+
+  let buttons = '';
+  if (isSafe) {
+    buttons = `
+      <button class="btn btn-primary" onclick="closeTakeover()">เข้าใจแล้ว</button>
+    `;
+  } else {
+    buttons = `
+      <button class="btn btn-primary" onclick="closeTakeover()">← กลับให้ฉันปลอดภัย</button>
+      <button class="btn btn-ghost" onclick="closeTakeover()" style="font-size:12px; color: var(--dim);">ยังจะดำเนินการต่อ...</button>
+    `;
+    stats.blocked++;
+  }
+  saveStats();
+
+  t.innerHTML = `
+    <button class="icon-btn takeover-close" onclick="closeTakeover()" aria-label="Close">
+      <svg viewBox="0 0 24 24"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+    </button>
+    <div class="takeover-hero">
+      <div class="pill ${isSafe ? 'accent' : 'danger'}"><span class="dot"></span> ${label}</div>
+      <div class="takeover-icon">${ico}</div>
+      <div class="takeover-title">${title}</div>
+      <div class="takeover-sub">${sub}</div>
+      ${valueRow}
+      <div class="takeover-risk">${risk}<small>%</small></div>
+      <div class="takeover-risk-lbl">${isSafe ? 'ความเสี่ยงต่ำ' : 'ระดับความเสี่ยง'}</div>
+    </div>
+    ${checks.length ? `
+      <div class="takeover-checks">
+        ${checks.map(c => `
+          <div class="row">
+            <div class="check-ico ${c.kind === 'bad' ? 'bad' : c.kind === 'warn' ? 'warn' : 'ok'}" style="background: ${c.kind === 'bad' ? 'rgba(255,61,90,0.12)' : c.kind === 'warn' ? 'rgba(255,176,46,0.12)' : 'rgba(0,232,122,0.12)'}; color: ${c.kind === 'bad' ? 'var(--red)' : c.kind === 'warn' ? 'var(--yellow)' : 'var(--accent)'};">${checkIcon(c.icon)}</div>
+            <div class="check-text">
+              <div class="check-title">${c.title}</div>
+              <div class="check-sub">${c.sub}</div>
+            </div>
+            <div class="check-val ${c.kind === 'bad' ? 'v-bad' : c.kind === 'warn' ? 'v-warn' : 'v-ok'}">${c.val}</div>
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+    <div class="takeover-actions">${buttons}</div>
+  `;
+}
+
+function closeTakeover() {
+  document.getElementById('takeover').classList.remove('show');
+}
+
+/* ---------- HISTORY ---------- */
+function recordHistory(item) {
+  item.id = Date.now() + Math.random();
+  item.time = new Date();
+  history.unshift(item);
+  if (history.length > 8) history = history.slice(0, 8);
+  stats.count++;
+  if (item.risk >= 70) stats.blocked++;
+  saveHistory();
+  saveStats();
+  renderHistory();
+}
+
+function loadHistory() {
+  try {
+    const h = JSON.parse(localStorage.getItem('cs_history') || '[]');
+    history = h.map(x => ({ ...x, time: new Date(x.time) }));
+  } catch { history = []; }
+  try {
+    stats = JSON.parse(localStorage.getItem('cs_stats') || '{"count":0,"blocked":0}');
+  } catch { stats = { count: 0, blocked: 0 }; }
+  renderHistory();
+}
+
+function saveHistory() {
+  try { localStorage.setItem('cs_history', JSON.stringify(history)); } catch {}
+}
+function saveStats() {
+  try { localStorage.setItem('cs_stats', JSON.stringify(stats)); } catch {}
+  document.getElementById('stat-count').textContent = stats.count;
+  document.getElementById('stat-blocked').textContent = stats.blocked;
+}
+
+function clearHistory() {
+  history = [];
+  stats = { count: 0, blocked: 0 };
+  saveHistory();
+  saveStats();
+  renderHistory();
+}
+
+function renderHistory() {
+  const wrap = document.getElementById('history-list');
+  document.getElementById('stat-count').textContent = stats.count;
+  document.getElementById('stat-blocked').textContent = stats.blocked;
+  if (history.length === 0) {
+    wrap.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg></div>
+        <div>ยังไม่มีประวัติการตรวจสอบ</div>
+        <div style="font-size:11px; margin-top:4px; color:var(--dim2);">ลองวิเคราะห์ SMS หรือสแกนลิงก์ดู</div>
+      </div>
+    `;
+    return;
+  }
+  wrap.innerHTML = history.map(h => {
+    const klass = h.risk >= 70 ? 'r-high' : h.risk >= 40 ? 'r-mid' : 'r-low';
+    const icon = h.type === 'sms'
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`
+      : h.type === 'link'
+      ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`
+      : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+    const typeLabel = h.type === 'sms' ? 'SMS' : h.type === 'link' ? 'LINK' : 'CALL';
+    const tm = (h.time instanceof Date) ? h.time : new Date(h.time);
+    const time = `${String(tm.getHours()).padStart(2,'0')}:${String(tm.getMinutes()).padStart(2,'0')}`;
+    return `
+      <div class="hist-item">
+        <div class="hist-icon ${klass}">${icon}</div>
+        <div class="hist-text">
+          <div class="hist-title">${h.title}</div>
+          <div class="hist-meta">${typeLabel} · ${time}</div>
+        </div>
+        <div class="hist-score" style="color: ${h.risk >= 70 ? 'var(--red)' : h.risk >= 40 ? 'var(--yellow)' : 'var(--accent)'};">${h.risk}%</div>
+      </div>
+    `;
+  }).join('');
+}
+
+/* ---------- TWEAKS ---------- */
+function applyTweaks() {
+  document.documentElement.dataset.theme = TWEAKS.theme;
+  document.documentElement.style.setProperty('--accent', TWEAKS.accent);
+  document.documentElement.style.setProperty('--accent-fg', TWEAKS.accentFg);
+  document.documentElement.style.setProperty('--accent-glow', TWEAKS.accentGlow);
+  document.documentElement.style.setProperty('--font-base', TWEAKS.fontSize + 'px');
+  // Update toggle
+  document.querySelectorAll('#theme-toggle button').forEach(b => {
+    b.classList.toggle('active', b.dataset.theme === TWEAKS.theme);
+  });
+  document.querySelectorAll('#accent-swatches .swatch').forEach(s => {
+    s.classList.toggle('active', s.dataset.accent === TWEAKS.accent);
+  });
+  const slider = document.getElementById('font-slider');
+  if (slider) {
+    slider.value = TWEAKS.fontSize;
+    document.getElementById('font-val').textContent = TWEAKS.fontSize + 'px';
+  }
+}
+
+function bindTweaks() {
+  document.querySelectorAll('#theme-toggle button').forEach(b => {
+    b.onclick = () => {
+      TWEAKS.theme = b.dataset.theme;
+      applyTweaks();
+    };
+  });
+  document.querySelectorAll('#accent-swatches .swatch').forEach(s => {
+    s.onclick = () => {
+      TWEAKS.accent = s.dataset.accent;
+      TWEAKS.accentGlow = s.dataset.glow;
+      TWEAKS.accentFg = s.dataset.fg;
+      applyTweaks();
+    };
+  });
+  const slider = document.getElementById('font-slider');
+  slider.oninput = e => {
+    TWEAKS.fontSize = parseInt(e.target.value, 10);
+    document.documentElement.style.setProperty('--font-base', TWEAKS.fontSize + 'px');
+    document.getElementById('font-val').textContent = TWEAKS.fontSize + 'px';
+  };
+}
+
+function openTweaks() {
+  document.getElementById('tweaks-panel').classList.add('show');
+  document.getElementById('panel-overlay').classList.add('show');
+}
+function closeTweaks() {
+  document.getElementById('tweaks-panel').classList.remove('show');
+  document.getElementById('panel-overlay').classList.remove('show');
+}
+
+function randomizeAll() {
+  // Pick scam scenario across each
+  const sm = SMS_SCENARIOS[Math.floor(Math.random() * SMS_SCENARIOS.length)];
+  const lk = LINK_SCENARIOS[Math.floor(Math.random() * LINK_SCENARIOS.length)];
+  const vc = VOICE_SCENARIOS[Math.floor(Math.random() * VOICE_SCENARIOS.length)];
+  selectSms(sm); selectLink(lk); selectVoice(vc);
+  closeTweaks();
+  alert(`สุ่มแล้ว!\nSMS: ${sm.label}\nLink: ${lk.label}\nVoice: ${vc.label}\n\nเข้าหน้านั้น ๆ แล้วกด "วิเคราะห์" ได้เลย`);
+}
+
+/* ---------- UTIL ---------- */
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+/* ---------- BOOT ---------- */
+init();
+</script>
+</body>
+</html>
