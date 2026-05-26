@@ -186,7 +186,7 @@ trainer = Trainer(
 )
 
 print("Starting training... this might take a few minutes!")
-trainer.train()
+#trainer.train()
 
 # ============================================
 # STEP 11: Save the trained model
