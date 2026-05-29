@@ -6,7 +6,7 @@ import re
 # ============================================
 
 URGENCY_KEYWORDS = [
-    "ด่วน", "รีบ", "ทันที",
+    "ด่วน", "รีบ",
     "ภายใน 24 ชม", "ภายใน 24 ชั่วโมง",
     "หมดเขต", "วันนี้เท่านั้น",
     "มิฉะนั้น", "จะถูกระงับ",
@@ -34,11 +34,30 @@ FAKE_URL_KEYWORDS = [
 IMPERSONATION_KEYWORDS = [
     "ไปรษณีย์ไทย", "กสิกรไทย", "kbank",
     "scb", "กรุงไทย", "ออมสิน",
-    "ทรูมูฟ", "เอไอเอส", "ดีแทค",
+    "ทรูมูฟ", "ดีแทค",
     "การไฟฟ้า", "ประกันสังคม",
     "กรมสรรพากร", "ตำรวจ", "ศาล", "ดีเอสไอ",
-    "ihappyloan", "tidlor"  # fake loan companies we saw
+    "ihappyloan", "tidlor",
+    "เอไอเอส", "ais"
 ]
+
+# map brand keywords to their real sender IDs
+# if sender matches → not impersonation
+BRAND_SENDER_MAP = {
+    "ไปรษณีย์ไทย": ["thailandpost", "thaipost"],
+    "กสิกรไทย":    ["kbank", "kasikorn"],
+    "kbank":        ["kbank", "kasikorn"],
+    "scb":          ["scb", "scbeasy"],
+    "กรุงไทย":     ["krungthai", "ktb"],
+    "ออมสิน":      ["gsb"],
+    "ทรูมูฟ":      ["true", "truemove", "truebill", "trueonline"],
+    "ดีแทค":       ["dtac"],
+    "เอไอเอส":     ["ais", "ais points", "aisplay", "gomo"],
+    "ais":          ["ais", "ais points", "aisplay", "gomo"],
+    "การไฟฟ้า":    ["pea", "mea"],
+    "ประกันสังคม": ["sso"],
+    "กรมสรรพากร":  ["rd"],
+}
 
 BAIT_KEYWORDS = [
     "ได้รับรางวัล", "ยินดีด้วย",
@@ -106,14 +125,23 @@ def detect_signals(text, sender=""):
             break
 
     # check IMPERSONATION — pretending to be real organizations
+    # now checks sender to avoid false alarms on legit SMS
     for keyword in IMPERSONATION_KEYWORDS:
         if re.search(keyword, text, re.IGNORECASE):
-            signals.append({
-                "type": "IMPERSONATION",
-                "kind": "warn",
-                "label": "แอบอ้างหน่วยงาน",
-                "detail": f'อ้างตัวเป็น "{keyword}" กรุณาตรวจสอบผู้ส่งจริง'
-            })
+            # check if sender is the real brand
+            real_senders = BRAND_SENDER_MAP.get(keyword.lower(), [])
+            sender_is_real = any(
+                s in sender.lower()
+                for s in real_senders
+            )
+            # only flag if sender doesn't match real brand
+            if not sender_is_real:
+                signals.append({
+                    "type": "IMPERSONATION",
+                    "kind": "warn",
+                    "label": "แอบอ้างหน่วยงาน",
+                    "detail": f'อ้างตัวเป็น "{keyword}" กรุณาตรวจสอบผู้ส่งจริง'
+                })
             break
 
     # check BAIT — lure with rewards or easy money
@@ -180,7 +208,7 @@ HIGHLIGHT_RULES = [
     ("GAMBLING",      GAMBLING_KEYWORDS),
 ]
 
-def highlight_text(text):
+def highlight_text(text, sender=""):
     # find all suspicious words and their positions in text
     # returns list of chunks: each chunk has text + type (None = safe)
     
@@ -193,8 +221,13 @@ def highlight_text(text):
             for match in re.finditer(keyword, text, re.IGNORECASE):
                 start = match.start()
                 end = match.end()
-                # only mark if not already marked by another signal
                 if start not in marked:
+                    # skip IMPERSONATION highlight if sender is real brand
+                    if signal_type == "IMPERSONATION":
+                        real_senders = BRAND_SENDER_MAP.get(keyword.lower(), [])
+                        sender_is_real = any(s in sender.lower() for s in real_senders)
+                        if sender_is_real:
+                            continue  # skip this highlight
                     marked[start] = (end, signal_type)
 
     # step 2: sort marks by position (left to right)
