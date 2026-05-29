@@ -186,15 +186,15 @@ trainer = Trainer(
 )
 
 print("Starting training... this might take a few minutes!")
-#trainer.train()
+# trainer.train()
 
 # ============================================
 # STEP 11: Save the trained model
 # ============================================
 
 # save model and tokenizer so we can use it later without retraining
-model.save_pretrained("02_ai/cybersense_model")
-tokenizer.save_pretrained("02_ai/cybersense_model")
+# model.save_pretrained("02_ai/cybersense_model")
+# tokenizer.save_pretrained("02_ai/cybersense_model")
 
 print("Model saved to 02_ai/cybersense_model!")
 print("Training complete!")
@@ -273,7 +273,7 @@ def analyze_sms(text, sender=""):
     signals = detect_signals(text, sender)
     
     # step 4: get highlight chunks
-    highlights = highlight_text(text)
+    highlights = highlight_text(text, sender)
     
     # step 5: combine everything into one response
     return {
