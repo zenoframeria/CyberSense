@@ -273,7 +273,7 @@ def analyze_sms(text, sender=""):
     signals = detect_signals(text, sender)
     
     # step 4: get highlight chunks
-    highlights = highlight_text(text)
+    highlights = highlight_text(text, sender)
     
     # step 5: combine everything into one response
     return {

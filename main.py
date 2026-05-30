@@ -12,6 +12,7 @@ import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "02_ai"))
 
 from sms_analyzer import analyze_sms
+from url_scanner import scan_url
 
 
 # create FastAPI app
@@ -49,7 +50,17 @@ def analyze_sms_endpoint(request: SMSRequest):
     return result
 
 # ============================================
-# ENDPOINT 2: Check if the server is still running.
+# ENDPOINT 2: URL Scanner
+# ============================================
+
+@app.post("/analyze/url")
+def analyze_url_endpoint(request: URLRequest):
+    # receive URL from Frontend → scan → return result
+    result = scan_url(request.url)
+    return result
+
+# ============================================
+# ENDPOINT 3: Check if the server is still running. (Health Check)
 # ============================================
 
 @app.get("/")
