@@ -579,9 +579,22 @@
     line-height: 1.85;
     color: var(--text);
   }
-  .hl-r { background: rgba(var(--red-glow), 0.18); color: var(--red); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
-  .hl-y { background: rgba(var(--yellow-glow), 0.18); color: var(--yellow); border-radius: 3px; padding: 1px 4px; font-weight: 500; text-decoration: underline; text-decoration-color: rgba(var(--yellow-glow), 0.4); }
-  .hl-o { background: rgba(255,122,61, 0.18); color: var(--orange); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
+  /*XAI Highlight Colors*/
+.hl-red {
+  background: rgba(var(--red-glow), 0.18);
+  color: var(--red);
+  border-radius: 3px; padding: 1px 5px; font-weight: 500;
+}
+.hl-orange {
+  background: rgba(255,122,61, 0.18);
+  color: var(--orange);
+  border-radius: 3px; padding: 1px 5px; font-weight: 500;
+}
+.hl-yellow {
+  background: rgba(var(--yellow-glow), 0.18);
+  color: var(--yellow);
+  border-radius: 3px; padding: 1px 5px; font-weight: 500;
+}
 
   .signal-list { margin: 10px 18px 0; }
   .sig {
@@ -2085,6 +2098,22 @@ function matchSms(text) {
     ]
   };
 }
+// map: signal type from backend → css class color
+// Want to change the color of any type? Edit it here in one place.
+const HL_COLOR = {
+  FAKE_URL:      "hl-red",     // Fake link = Clicking it will lead to being scammed.
+  GAMBLING:      "hl-red",     // illegal gambling
+  URGENCY:       "hl-orange",  // Speeding up time = A psychological tactic.
+  BAIT:          "hl-orange",  // Enticing rewards = Psychological manipulation.
+  IMPERSONATION: "hl-yellow",  // Impersonation = Suspicious
+};
+
+// Prevent < > & tags in SMS messages from breaking HTML (Important! SMS scams often use fake tags).
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
 
 function renderSmsResult(sc, originalText) {
   const klass = sc.risk >= 70 ? 'r-high' : sc.risk >= 40 ? 'r-mid' : 'r-low';
@@ -2092,12 +2121,18 @@ function renderSmsResult(sc, originalText) {
   const eyebrow = sc.risk >= 70 ? 'HIGH RISK · SCAM' : sc.risk >= 40 ? 'MEDIUM RISK' : 'LOW RISK';
 
   // build highlighted text
-  let body = sc.text || originalText;
+  // highlights[] from backend is a sequence of chunks (normal + highlights alternating).
+  // Just continue with the chunks directly, no need to replace -> chunks that are type=null become plain text.
+  let body;
   if (sc.highlights && sc.highlights.length) {
-    sc.highlights.forEach(h => {
-      const safe = h.text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      body = body.replace(new RegExp(safe), `<span class="hl-${h.type}">${h.text}</span>`);
-    });
+    body = sc.highlights.map(h => {
+      const safeText = escapeHTML(h.text);            // The <>& in a scam message will break HTML.
+      if (!h.type) return safeText;                    // Normal chunk -> plain text, no tag
+      const cls = HL_COLOR[h.type] || 'hl-orange';     // Convert type -> color (strange type -> orange)
+      return `<span class="${cls}">${safeText}</span>`;
+    }).join('');
+  } else {
+    body = escapeHTML(sc.text || originalText);        // no highlights -> show plain text
   }
 
   let html = `
