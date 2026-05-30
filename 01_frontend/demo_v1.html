@@ -2022,17 +2022,49 @@ async function analyzeSms() {
     sub.textContent = steps[i];
     await sleep(420);
   }
-
   loading.classList.add('hide');
-  // Pick scenario; if none selected, fuzzy match by content keywords
-  const sc = selectedSmsScenario || matchSms(text);
-  renderSmsResult(sc, text);
 
-  recordHistory({
-    type: 'sms',
-    title: sc.sender + ' — ' + (sc.text.slice(0, 28)) + '…',
-    risk: sc.risk
-  });
+  try {
+    const response = await fetch('https://unlucky-escargot-matrix.ngrok-free.dev/analyze/sms', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
+      body: JSON.stringify({ text: text, sender: '' })
+    });
+
+    if (!response.ok) throw new Error('Server error ' + response.status);
+    const data = await response.json();
+
+    const sc = {
+      risk: data.risk,
+      label: data.label,
+      sender: 'ไม่ทราบที่มา',
+      text: text,
+      highlights: data.highlights || [],
+      signals: (data.signals || []).map(s => ({
+        kind: s.kind,
+        tag: s.type,
+        title: s.label,
+        desc: s.detail
+      }))
+    };
+
+    renderSmsResult(sc, text);
+    recordHistory({
+      type: 'sms',
+      title: sc.sender + ' — ' + text.slice(0, 28) + '…',
+      risk: sc.risk
+    });
+
+  } catch (err) {
+    result.innerHTML = `
+      <div style="padding:20px; color:var(--red);">
+        ❌ เชื่อมต่อ API ไม่ได้: ${err.message}<br><br>
+        <small>ลองเช็คว่า Backend ยังรันอยู่ไหม</small>
+      </div>`;
+  }
 }
 
 function matchSms(text) {
