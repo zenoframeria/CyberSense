@@ -24,8 +24,8 @@ FAKE_URL_KEYWORDS = [
     "faepass.cc",
     r"[^\s]*\.cc[/\s$]", 
     r"https?://[^\s]*\.cc[/\s]",
-    r"https?://[^\s]*-verify[^\s]*",
-    r"https?://[^\s]*-secure[^\s]*",
+    r"[^\s]*-verify[^\s]*",
+    r"[^\s]*-secure[^\s]*",
     r"https?://[^\s]*\.xyz[^\s]*",
     r"https?://[^\s]*\.top[^\s]*",
     r"https?://[^\s]*\.click[^\s]*",
@@ -201,11 +201,11 @@ for sms, sender in test_cases:
 
 # map each signal type to which keywords to scan
 HIGHLIGHT_RULES = [
-    ("URGENCY",       URGENCY_KEYWORDS),
     ("FAKE_URL",      FAKE_URL_KEYWORDS),
-    ("IMPERSONATION", IMPERSONATION_KEYWORDS),
-    ("BAIT",          BAIT_KEYWORDS),
     ("GAMBLING",      GAMBLING_KEYWORDS),
+    ("URGENCY",       URGENCY_KEYWORDS),
+    ("BAIT",          BAIT_KEYWORDS),
+    ("IMPERSONATION", IMPERSONATION_KEYWORDS),
 ]
 
 def highlight_text(text, sender=""):
@@ -227,9 +227,15 @@ def highlight_text(text, sender=""):
                         real_senders = BRAND_SENDER_MAP.get(keyword.lower(), [])
                         sender_is_real = any(s in sender.lower() for s in real_senders)
                         if sender_is_real:
-                            continue  # skip this highlight
-                    marked[start] = (end, signal_type)
-
+                            continue
+                    # Skip if this span overlaps an already-marked span
+                    # (first rule wins -> FAKE_URL beats IMPERSONATION on same text)
+                    overlaps = any(
+                        start < e and s < end
+                        for s, (e, _) in marked.items()
+                )
+                    if not overlaps:
+                        marked[start] = (end, signal_type)
     # step 2: sort marks by position (left to right)
     sorted_marks = sorted(marked.items())
 
