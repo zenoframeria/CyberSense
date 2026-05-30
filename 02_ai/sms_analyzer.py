@@ -230,8 +230,8 @@ def predict(text, sender=""):
     # load model if not loaded yet
     _load_model()
     
-    # combine sender + text like we did during training
-    input_text = f"Sender: {sender} | {text}" if sender else text
+    current_sender = sender if sender and sender.strip() else "ทั่วไป"
+    input_text = f"Sender: {current_sender} | {text}"
     
     # tokenize input text
     inputs = _tokenizer(
