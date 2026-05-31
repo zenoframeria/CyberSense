@@ -350,7 +350,9 @@
   .xai-quote { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; font-size: 13px; line-height: 1.85; color: var(--text); }
   .hl-r { background: rgba(var(--red-glow), 0.18); color: var(--red); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
   .hl-y { background: rgba(var(--yellow-glow), 0.18); color: var(--yellow); border-radius: 3px; padding: 1px 4px; font-weight: 500; text-decoration: underline; text-decoration-color: rgba(var(--yellow-glow), 0.4); }
-
+  .hl-red { background: rgba(var(--red-glow), 0.18); color: var(--red); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
+  .hl-orange { background: rgba(255,122,61, 0.18); color: var(--orange); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
+  .hl-yellow { background: rgba(var(--yellow-glow), 0.18); color: var(--yellow); border-radius: 3px; padding: 1px 4px; font-weight: 500; }
   .signal-list { margin: 10px 18px 0; }
   .sig { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 6px; }
   .sig-ico { width: 28px; height: 28px; border-radius: 7px; background: var(--surface2); flex-shrink: 0; display: inline-flex; align-items:center; justify-content:center; }
@@ -359,9 +361,10 @@
   .sig-ico.warn { background: rgba(var(--yellow-glow), 0.12); color: var(--yellow); }
   .sig-ico.ok { background: rgba(var(--accent-glow), 0.12); color: var(--accent); }
   .sig-body { flex:1; min-width: 0; }
+  .sig-tag { font-family: var(--font-mono); font-size: 9px; letter-spacing: 1.5px; color: var(--dim); text-transform: uppercase; flex-shrink: 0; align-self: center; }
   .sig-title { font-size: 12px; font-weight: 600; }
   .sig-desc  { font-size: 11px; color: var(--text2); margin-top: 2px; line-height: 1.5; }
-
+ 
   /* ---------- TABS & FILE ---------- */
   .tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 4px; margin: 0 18px 14px; position: relative; }
   .tab { padding: 10px; text-align: center; font-size: 12px; font-weight: 600; color: var(--text2); border-radius: 9px; transition: var(--t); z-index: 1; }
@@ -543,6 +546,39 @@
   /* ---------- DANGER TAKEOVER ---------- */
   .takeover { position: absolute; inset: 0; z-index: 110; background: var(--bg); display: none; flex-direction: column; overflow-y: auto; animation: slideUp 0.35s cubic-bezier(.4,0,.2,1); }
   .takeover.show { display: flex; }
+  .takeover-close { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; z-index: 5; }
+  .takeover-close svg { width: 20px; height: 20px; stroke: var(--text); fill: none; stroke-width: 2; }
+  .takeover-hero { padding: 56px 24px 28px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .takeover.danger .takeover-hero { background: linear-gradient(180deg, rgba(var(--red-glow),0.15), transparent); }
+  .takeover.safe .takeover-hero { background: linear-gradient(180deg, rgba(var(--accent-glow),0.15), transparent); }
+  .takeover-icon { width: 72px; height: 72px; border-radius: 20px; display: inline-flex; align-items: center; justify-content: center; }
+  .takeover.danger .takeover-icon { background: rgba(var(--red-glow),0.15); color: var(--red); }
+  .takeover.safe .takeover-icon { background: rgba(var(--accent-glow),0.15); color: var(--accent); }
+  .takeover-icon svg { width: 36px; height: 36px; stroke: currentColor; fill: none; stroke-width: 2; }
+  .takeover-title { font-size: 22px; font-weight: 700; }
+  .takeover.danger .takeover-title { color: var(--red); }
+  .takeover.safe .takeover-title { color: var(--accent); }
+  .takeover-sub { font-size: 12px; color: var(--text2); line-height: 1.5; max-width: 280px; }
+  .takeover-url { font-family: var(--font-mono); font-size: 12px; color: var(--text2); background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; word-break: break-all; margin-top: 4px; }
+  .takeover-risk { font-family: var(--font-mono); font-size: 48px; font-weight: 700; line-height: 1; margin-top: 8px; }
+  .takeover.danger .takeover-risk { color: var(--red); }
+  .takeover.safe .takeover-risk { color: var(--accent); }
+  .takeover-risk small { font-size: 20px; }
+  .takeover-risk-lbl { font-family: var(--font-mono); font-size: 9px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+  .takeover-checks { padding: 8px 18px 18px; display: flex; flex-direction: column; gap: 6px; }
+  .takeover-checks .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; }
+  .check-ico { width: 28px; height: 28px; border-radius: 7px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .check-ico.bg-bad { background: rgba(var(--red-glow),0.12); color: var(--red); }
+  .check-ico.bg-warn { background: rgba(var(--yellow-glow),0.12); color: var(--yellow); }
+  .check-ico.bg-ok { background: rgba(var(--accent-glow),0.12); color: var(--accent); }
+  .check-text { flex: 1; min-width: 0; }
+  .check-title { font-size: 12px; font-weight: 600; }
+  .check-sub { font-size: 11px; color: var(--text2); margin-top: 2px; line-height: 1.4; }
+  .check-val { font-family: var(--font-mono); font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .check-val.v-bad { color: var(--red); }
+  .check-val.v-warn { color: var(--yellow); }
+  .check-val.v-ok { color: var(--accent); }
+  .takeover-actions { padding: 8px 18px 24px; display: flex; flex-direction: column; gap: 8px; margin-top: auto; }
   @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
   /* ---------- TWEAKS PANEL ---------- */
@@ -1647,14 +1683,14 @@ async function analyzeSms() {
     clearInterval(stepInterval);
     load.classList.add('hide');
     btn.disabled = false;
-    renderResult(data);
+    showSmsResult(data);
 
   } catch (error) {
     clearInterval(stepInterval);
     await sleep(1800);
     load.classList.add('hide');
     btn.disabled = false;
-    showSmsResult(txt);
+    res.innerHTML = '<div class="glass-card" style="margin-top:20px;"><p style="color:var(--red)">เชื่อมต่อ AI ไม่ได้ ลองใหม่อีกครั้ง</p></div>';
   }
 }
 
@@ -1672,45 +1708,52 @@ function renderResult(data) {
 
 
 
-function showSmsResult(txt) {
-  let s = selectedSmsScenario;
-  if(!s || s.text !== txt) {
-    s = {
-      risk: txt.length % 2 === 0 ? 76 : 14,
-      sender: 'ไม่ระบุผู้ส่ง',
-      text: txt,
-      highlights: [],
-      signals: [
-        { kind: 'warn', tag: 'GENERIC', title: 'ข้อความทั่วไป', desc: 'วิเคราะห์โครงสร้างตามชุดคำพึงระวังเบื้องต้น' }
-      ]
-    };
-    if (s.risk > 50) {
-      s.signals.push({ kind: 'bad', tag: 'SUSPICIOUS', title: 'พบความเสี่ยง', desc: 'มีลักษณะการกระตุ้นอารมณ์หรือลิงก์แปลกปลอม' });
-    }
+// map signal type -> css color class (กลับมาจากที่แก้เมื่อคืน)
+const HL_COLOR = {
+  FAKE_URL: 'hl-red', GAMBLING: 'hl-red',
+  URGENCY: 'hl-orange', BAIT: 'hl-orange',
+  IMPERSONATION: 'hl-yellow',
+};
+function escapeHTML(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
+
+function showSmsResult(data) {
+  // data = real API response { risk, label, signals[], highlights[] }
+  const risk = data.risk;
+  const cls = risk >= 70 ? 'r-high' : risk >= 40 ? 'r-mid' : 'r-low';
+  let lbl = 'เสี่ยงสูงมาก';
+  if (risk < 70) lbl = 'ควรเฝ้าระวัง';
+  if (risk < 40) lbl = 'ความเสี่ยงต่ำ';
+
+  // build highlight from real chunks (null = plain text)
+  let highlightHtml = '';
+  if (data.highlights && data.highlights.length) {
+    highlightHtml = data.highlights.map(h => {
+      const safe = escapeHTML(h.text);
+      if (!h.type) return safe;
+      const c = HL_COLOR[h.type] || 'hl-orange';
+      return `<span class="${c}">${safe}</span>`;
+    }).join('');
+  } else {
+    highlightHtml = escapeHTML(data.text || '');
   }
 
-  const cls = s.risk >= 70 ? 'r-high' : s.risk >= 40 ? 'r-mid' : 'r-low';
-  let lbl = 'เสี่ยงสูงมาก';
-  if(s.risk < 70) lbl = 'ควรเฝ้าระวัง';
-  if(s.risk < 40) lbl = 'ความเสี่ยงต่ำ';
-
-  let highlightHtml = s.text;
-  s.highlights.forEach(h => {
-    highlightHtml = highlightHtml.replace(h.text, `<span class="hl-${h.type}">${h.text}</span>`);
-  });
-
+  // build signals — backend sends {type, kind, label, detail}
   let sigsHtml = '';
-  s.signals.forEach(g => {
+  data.signals.forEach(g => {
     sigsHtml += `
       <div class="sig">
         <div class="sig-ico ${g.kind === 'bad' ? 'bad' : g.kind === 'warn' ? 'warn' : 'ok'}">
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="${g.kind === 'ok' ? 'M9 12l2 2 4-4' : 'M12 8v4M12 16h.01'}" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="sig-body">
-          <div class="sig-title">${g.title}</div>
-          <div class="sig-desc">${g.desc}</div>
+          <div class="sig-title">${g.label}</div>
+          <div class="sig-desc">${g.detail}</div>
         </div>
-        <div class="sig-tag">${g.tag}</div>
+        <div class="sig-tag">${g.type}</div>
       </div>
     `;
   });
@@ -1719,13 +1762,13 @@ function showSmsResult(txt) {
     <div class="result-card ${cls}">
       <div class="verdict-row">
         <div class="verdict-label">
-          <div class="v-eyebrow">ผู้ส่ง: ${s.sender}</div>
+          <div class="v-eyebrow">ผลวิเคราะห์</div>
           <div class="v-title">${lbl}</div>
         </div>
-        <div class="risk-num">${s.risk}<small>%</small></div>
+        <div class="risk-num">${risk}<small>%</small></div>
       </div>
       <div class="risk-track-wrap">
-        <div class="risk-track"><div class="risk-prog" style="width:${s.risk}%"></div></div>
+        <div class="risk-track"><div class="risk-prog" style="width:${risk}%"></div></div>
       </div>
     </div>
 
@@ -1735,18 +1778,11 @@ function showSmsResult(txt) {
     </div>
 
     <div class="signal-list">
-      <div class="xai-head">▸ สัญญาณอันตรายที่ตรวจพบ (${s.signals.length})</div>
+      <div class="xai-head">▸ สัญญาณอันตรายที่ตรวจพบ (${data.signals.length})</div>
       ${sigsHtml}
     </div>
-
-    <div style="padding: 14px 18px 0;">
-      <button class="btn ${s.risk >= 50 ? 'btn-danger' : 'btn-ghost'}" onclick="saveToHistory('SMS', '${s.sender}', ${s.risk}); this.textContent='✓ บันทึกแล้ว'; this.disabled=true;">
-        ${s.risk >= 50 ? '🛡️ รายงานและบล็อกผู้ส่งนี้' : '✓ บันทึกประวัติ'}
-      </button>
-    </div>
   `;
-  // auto-save ทันที
-  saveToHistory('SMS', s.sender, s.risk);
+  saveToHistory('SMS', 'ผลวิเคราะห์', risk);
 }
 
 /* ---------- FEATURE: LINK SCAN ---------- */
@@ -1759,7 +1795,7 @@ function selectLink(s) {
   document.getElementById('link-result').innerHTML = '';
 }
 
-function scanLink() {
+async function scanLink() {
   const url = document.getElementById('link-input').value.trim();
   if(!url) return;
 
@@ -1770,17 +1806,35 @@ function scanLink() {
   load.classList.remove('hide');
   res.innerHTML = '';
 
+  // loading steps animation (เหมือนเดิม)
   const steps = ['› DOMAIN DNS LOOKUP', '› SSL CERT CHECK', '› BRAND VISUAL MATCHING', '› PHISHING DB SCANNED'];
   let idx = 0;
   const iv = setInterval(() => {
-    if(idx < steps.length) {
-      sub.textContent = steps[idx++];
-    } else {
-      clearInterval(iv);
-      load.classList.add('hide');
-      showLinkResult(url);
-    }
+    if(idx < steps.length) sub.textContent = steps[idx++];
   }, 400);
+
+  try {
+    const response = await fetch('https://unlucky-escargot-matrix.ngrok-free.dev/analyze/url', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'ngrok-skip-browser-warning': 'true'
+      },
+      body: JSON.stringify({ url: url })
+    });
+    if (!response.ok) throw new Error('Server Error');
+    const data = await response.json();
+
+    clearInterval(iv);
+    load.classList.add('hide');
+    openTakeover(data);                       // ส่ง data จริงเข้า popup
+    saveToHistory('LINK', data.url || url, data.risk);
+
+  } catch (error) {
+    clearInterval(iv);
+    load.classList.add('hide');
+    res.innerHTML = '<div class="glass-card" style="margin-top:20px;"><p style="color:var(--red)">เชื่อมต่อ AI ไม่ได้ ลองใหม่อีกครั้ง</p></div>';
+  }
 }
 
 function showLinkResult(url) {
