@@ -6,7 +6,7 @@
 <title>CyberSense — รู้ทันก่อนโดนหลอก</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href=<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   /* ---------- TWEAKABLE TOKENS ---------- */
   :root {
@@ -34,7 +34,7 @@
     --font-base: 16px;
     --radius:    14px;
 
-    --font-sans: 'IBM Plex Sans Thai', system-ui, sans-serif;
+    --font-sans: 'Inter', 'IBM Plex Sans Thai', system-ui, sans-serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
     --t: 0.22s cubic-bezier(.4,0,.2,1);
@@ -88,6 +88,8 @@
     line-height: 1.5;
     overflow: hidden;
     -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   }
   button { font-family: inherit; color: inherit; cursor: pointer; border: none; background: none; }
   input, textarea { font-family: inherit; color: inherit; }
@@ -968,7 +970,7 @@
               <span class="lbl">▸ ข้อความที่ต้องการวิเคราะห์</span>
               <button class="pill" onclick="clearSmsInput()" style="padding:3px 8px;font-size:9px;">ล้าง</button>
             </div>
-            <textarea class="text-area" id="sms-input" placeholder="วางข้อความ SMS ที่สงสัยที่นี่..."></textarea>
+            <textarea class="text-area" id="sms-input" placeholder="วางข้อความ SMS ที่นี่... ตัวอย่างโครงสร้าง: [Sender] | [ข้อความของคุณ] เช่น EX-BANK | คุณได้รับสิทธิ์กู้เงินด่วน..."></textarea>
           </div>
 
           <div class="scenario-row">
@@ -1292,10 +1294,10 @@ const SMS_SCENARIOS = [
   },
   {
     id: 'bank-otp',
-    label: 'ธนาคารระงับบัญชี',
+    label: 'ตรวจพบการเข้าสู่ระบบที่ผิดปกติ',
     risk: 88,
-    sender: 'KBANK-Alert',
-    text: 'แจ้งเตือน! บัญชีของท่านมีความเสี่ยงผิดปกติ กรุณายืนยันตัวตนด่วน เพื่อป้องกันการระงับบัญชี: kbank-secure[.]xyz/verify',
+    sender: '',
+    text: 'บัญชีของคุณตรวจพบการเข้าสู่ระบบที่ผิดปกติ เพื่อความปลอดภัยของเงินในกระเป๋า ShopeePay กรุณาคลิกเปลี่ยนรหัสผ่านทันทีที่ https://shopee-security-check.com',
     highlights: [
       { type: 'r', text: 'แจ้งเตือน!' },
       { type: 'o', text: 'KBANK' },
@@ -1312,10 +1314,10 @@ const SMS_SCENARIOS = [
   },
   {
     id: 'safe-otp',
-    label: 'OTP ของจริง (ปลอดภัย)',
+    label: 'OTP',
     risk: 6,
-    sender: 'KBANK',
-    text: 'รหัส OTP ของท่านคือ 847293 ใช้ได้ภายใน 3 นาที (อย่าเปิดเผยรหัสนี้ให้ผู้อื่น)',
+    sender: '',
+    text: 'รหัส OTP ของท่านคือ 847293 สำหรับทำรายการโอนเงิน (ใช้ได้ภายใน 3 นาที) ธนาคารไม่มีนโยบายขอรหัสนี้ผ่านช่องทางใดๆ',
     highlights: [],
     signals: [
       { kind: 'ok', tag: 'SENDER', title: 'ผู้ส่งตรงกับฐานข้อมูล', desc: 'KBANK เป็น sender ID ที่ลงทะเบียนถูกต้อง' },
@@ -1668,7 +1670,7 @@ async function analyzeSms() {
   }, 400);
 
   try {
-    const response = await fetch('https://unlucky-escargot-matrix.ngrok-free.dev/analyze/sms', {
+    const response = await fetch('/analyze/sms', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -1814,7 +1816,7 @@ async function scanLink() {
   }, 400);
 
   try {
-    const response = await fetch('https://unlucky-escargot-matrix.ngrok-free.dev/analyze/url', {
+    const response = await fetch('/analyze/url', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

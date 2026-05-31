@@ -229,11 +229,6 @@ def _load_model():
 def predict(text, sender=""):
     _load_model() # ห้ามลบเด็ดขาด!
     
-    # 1. รองรับการคั่น Sender ด้วย | แบบเนียนๆ ในกล่อง Text
-    if "|" in text and not sender:
-        parts = text.split("|", 1)
-        sender = parts[0].strip()
-        text = parts[1].strip()
     
     # 2. กันค่าว่าง/Unknown
     if not sender or sender.lower() in ["unknown", "unknow", "null", "ทั่วไป"]:
@@ -252,28 +247,68 @@ def predict(text, sender=""):
 
 # ============================================
 # STEP 14: Main analyze function
-# combines WangchanBERTa + XAI together
+# combines WangchanBERTa + XAI + Rule-based Fallback
 # ============================================
 
+# High-risk keywords สำหรับเลเยอร์ Rule-based (ดักหน้าโมเดล)
+# แยกเป็นหมวด: การเงิน + ลิงก์ + บัญชี
+FINANCIAL_RISK_KEYWORDS = [
+    "โอนเงิน", "โอนตัง", "โอนตังค์", "โอนเข้า", "ขอตัง", "ขอตังค์",
+    "ขอยืม", "ยืมเงิน", "โอนด่วน", "โอนให้หน่อย", "ช่วยโอน",
+    "เลขบัญชี", "เลขที่บัญชี", "บัญชีธนาคาร", "พร้อมเพย์", "promptpay",
+    "เบอร์พร้อมเพย์", "สแกนจ่าย", "qr", "กดรับเงิน", "รับโอน"
+]
+
 def analyze_sms(text, sender=""):
-    # 3. จัดการกรณี JSON ส่ง "unknow" มา (ให้มองเป็นค่าว่างเพื่อเข้า Zero Trust)
-    if sender and sender.lower() in ["unknown", "unknow"]:
+    # ===== Rule 0: แยก sender จากช่องเดียว (รูปแบบ "sender | text") =====
+    # ทำก่อนทุก logic เพื่อให้ rule-based layer เห็น sender ด้วย
+    if "|" in text and not sender:
+        parts = text.split("|", 1)
+        sender = parts[0].strip()
+        text = parts[1].strip()
+    
+    # ===== Rule 1: ถ้าไม่มี sender ให้ default เป็น "unknown" =====
+    if not sender or not sender.strip():
+        sender = "unknown"
+    
+    # 3. จัดการกรณี "unknown"/"unknow" → มองเป็นค่าว่างเพื่อเข้า Zero Trust
+    if sender.lower() in ["unknown", "unknow", "null", "ทั่วไป"]:
         sender = ""
-        
-    risk_score = predict(text, sender)
+    
     is_unknown_sender = not sender or sender.strip() == ""
     
-    # 4. Zero Trust Logic: ระแวงไว้ก่อนถ้าไม่รู้ที่มา
-    safe_words = ["แม่", "พ่อ", "ลูก", "พี่", "น้อง", "แฟน", "เพื่อน", "กินข้าว", "ค่าข้าว", "กลับบ้าน", "ตื่นยัง", "รักนะ", "คิดถึง", "โอนตังให้หน่อย", "ขอตังหน่อย", "ถึงแล้ว"]
-    has_safe_word = any(word in text for word in safe_words)
-    has_link = any(link in text.lower() for link in ["http", "https", "www.", ".com", ".ly", ".cc", "คลิก", "👉"])
     
-    if is_unknown_sender:
-        if has_safe_word and not has_link:
-            risk_score = 15 # ปลอดภัยจริง
+    # ===== Rule 2: Rule-based Fallback Layer (ดักหน้าโมเดล) =====
+    # ตรวจ keyword ความเสี่ยงสูง "ก่อน" ปล่อยให้โมเดลเดา
+    text_lower = text.lower()
+    has_link = any(link in text_lower for link in ["http", "https", "www.", ".com", ".ly", ".cc", ".xyz", ".top", ".click", "คลิก", "👉"])
+    has_financial_risk = any(kw in text_lower for kw in FINANCIAL_RISK_KEYWORDS)
+    has_high_risk = has_link or has_financial_risk
+    
+    safe_words = ["แม่", "พ่อ", "ลูก", "พี่", "น้อง", "แฟน", "เพื่อน", "กินข้าว", "ค่าข้าว", "กลับบ้าน", "ตื่นยัง", "รักนะ", "คิดถึง", "ถึงแล้ว"]
+    has_safe_word = any(word in text for word in safe_words)
+    
+    # ถ้า unknown + high-risk → ข้ามโมเดลไปเลย ตัดเป็น SUSPICIOUS ทันที
+    # ไม่ปล่อยให้โมเดลเดาสุ่ม เพราะเคสนี้อยู่นอก Dataset (OOD)
+    fallback_triggered = False
+    if is_unknown_sender and has_high_risk:
+        fallback_triggered = True
+        # ลิงก์เสี่ยงกว่าการขอเงินเปล่าๆ → ให้คะแนนต่างกัน
+        if has_link:
+            risk_score = 80   # SCAM: unknown + แนบลิงก์
         else:
-            risk_score = max(risk_score, 45) # ตรึงขั้นต่ำไว้ที่ SUSPICIOUS
-            
+            risk_score = 55   # SUSPICIOUS: unknown + ขอเงิน/บัญชี แต่ไม่มีลิงก์
+    else:
+        # เคสปกติ: ปล่อยให้โมเดลทำงาน
+        risk_score = predict(text, sender)
+        
+        # Zero Trust เดิม: unknown ที่ไม่ติด keyword เสี่ยง
+        if is_unknown_sender:
+            if has_safe_word and not has_link:
+                risk_score = 15  # ปลอดภัยจริง (เช่น "แม่ ถึงบ้านยัง")
+            else:
+                risk_score = max(risk_score, 45)  # ตรึงขั้นต่ำ SUSPICIOUS
+    
     # 5. สรุป Label
     if risk_score >= 80: label = "SCAM"
     elif risk_score >= 45: label = "SUSPICIOUS"
@@ -283,8 +318,16 @@ def analyze_sms(text, sender=""):
     highlights = highlight_text(text, sender)
     
     # แอบเติม Warning ใน Signals
-    if is_unknown_sender and label == "SUSPICIOUS":
+    if is_unknown_sender and label in ["SUSPICIOUS", "SCAM"]:
         signals.append({"type": "sender_warning", "label": "⚠️ ไม่พบผู้ส่งที่ยืนยันได้ โปรดระวัง"})
+    
+    # เพิ่ม signal บอกว่า rule-based ทำงาน (โปร่งใส/อธิบายได้)
+    if fallback_triggered:
+        reason = "พบลิงก์น่าสงสัย" if has_link else "พบการขอเงิน/ข้อมูลบัญชี"
+        signals.append({
+            "type": "rule_fallback",
+            "label": f"🛡️ ระบบตรวจจับกฎ: {reason} จากผู้ส่งไม่ทราบที่มา"
+        })
     
     return {
         "risk": risk_score,

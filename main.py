@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 # pydantic = validates incoming data format automatically
+from fastapi.staticfiles import StaticFiles
 
 import sys
 import os
@@ -63,10 +64,11 @@ def analyze_url_endpoint(request: URLRequest):
 # ENDPOINT 3: Check if the server is still running. (Health Check)
 # ============================================
 
-@app.get("/")
+@app.get("/health")
 def health_check():
     return {"status": "CyberSense API is running!"}
 
+app.mount("/", StaticFiles(directory="01_frontend", html=True), name="static")
 # ============================================
 # run server
 # ============================================
@@ -74,3 +76,4 @@ def health_check():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
