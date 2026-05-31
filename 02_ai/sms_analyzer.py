@@ -227,30 +227,28 @@ def _load_model():
 # ============================================
 
 def predict(text, sender=""):
-    # load model if not loaded yet
-    _load_model()
+    _load_model() # ห้ามลบเด็ดขาด!
     
-    current_sender = sender if sender and sender.strip() else "ทั่วไป"
+    # 1. รองรับการคั่น Sender ด้วย | แบบเนียนๆ ในกล่อง Text
+    if "|" in text and not sender:
+        parts = text.split("|", 1)
+        sender = parts[0].strip()
+        text = parts[1].strip()
+    
+    # 2. กันค่าว่าง/Unknown
+    if not sender or sender.lower() in ["unknown", "unknow", "null", "ทั่วไป"]:
+        current_sender = "SMS" # ใช้คำว่า "SMS" แทนเพื่อลด Bias ของโมเดล
+    else:
+        current_sender = sender
+        
     input_text = f"Sender: {current_sender} | {text}"
     
-    # tokenize input text
-    inputs = _tokenizer(
-        input_text,
-        return_tensors="pt",   # pt = PyTorch tensor
-        truncation=True,
-        padding=True,
-        max_length=128
-    )
-    
-    # run model — no gradient needed for inference
+    inputs = _tokenizer(input_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
     with torch.no_grad():
         outputs = _model(**inputs)
     
-    # convert logits to probability (0-100%)
     probs = torch.softmax(outputs.logits, dim=1)
-    risk_score = int(probs[0][1].item() * 100)  # class 1 = scam probability
-    
-    return risk_score
+    return int(probs[0][1].item() * 100)
 
 # ============================================
 # STEP 14: Main analyze function
@@ -258,24 +256,36 @@ def predict(text, sender=""):
 # ============================================
 
 def analyze_sms(text, sender=""):
-    # step 1: get risk score from AI model
+    # 3. จัดการกรณี JSON ส่ง "unknow" มา (ให้มองเป็นค่าว่างเพื่อเข้า Zero Trust)
+    if sender and sender.lower() in ["unknown", "unknow"]:
+        sender = ""
+        
     risk_score = predict(text, sender)
+    is_unknown_sender = not sender or sender.strip() == ""
     
-    # step 2: determine label based on threshold
-    if risk_score >= 75:
-        label = "SCAM"
-    elif risk_score >= 50:
-        label = "SUSPICIOUS"
-    else:
-        label = "LEGIT"
+    # 4. Zero Trust Logic: ระแวงไว้ก่อนถ้าไม่รู้ที่มา
+    safe_words = ["แม่", "พ่อ", "ลูก", "พี่", "น้อง", "แฟน", "เพื่อน", "กินข้าว", "ค่าข้าว", "กลับบ้าน", "ตื่นยัง", "รักนะ", "คิดถึง", "โอนตังให้หน่อย", "ขอตังหน่อย", "ถึงแล้ว"]
+    has_safe_word = any(word in text for word in safe_words)
+    has_link = any(link in text.lower() for link in ["http", "https", "www.", ".com", ".ly", ".cc", "คลิก", "👉"])
     
-    # step 3: get XAI signals
+    if is_unknown_sender:
+        if has_safe_word and not has_link:
+            risk_score = 15 # ปลอดภัยจริง
+        else:
+            risk_score = max(risk_score, 45) # ตรึงขั้นต่ำไว้ที่ SUSPICIOUS
+            
+    # 5. สรุป Label
+    if risk_score >= 80: label = "SCAM"
+    elif risk_score >= 45: label = "SUSPICIOUS"
+    else: label = "LEGIT"
+    
     signals = detect_signals(text, sender)
-    
-    # step 4: get highlight chunks
     highlights = highlight_text(text, sender)
     
-    # step 5: combine everything into one response
+    # แอบเติม Warning ใน Signals
+    if is_unknown_sender and label == "SUSPICIOUS":
+        signals.append({"type": "sender_warning", "label": "⚠️ ไม่พบผู้ส่งที่ยืนยันได้ โปรดระวัง"})
+    
     return {
         "risk": risk_score,
         "label": label,
