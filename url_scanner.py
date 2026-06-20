@@ -1,3 +1,4 @@
+import logging
 import whois
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -231,8 +232,8 @@ def check_domain_age(domain) -> dict:
                         'val': f'{years} ปี'
                     }
                 }
-    except Exception:
-        pass
+    except Exception as e:
+        logging.warning("Domain age check failed for %s: %s", domain, e)
 
     return {
         'score': 20,
