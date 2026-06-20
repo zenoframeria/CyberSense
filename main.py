@@ -4,8 +4,8 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-# pydantic = validates incoming data format automatically
+from pydantic import BaseModel, Field
+import logging
 from fastapi.staticfiles import StaticFiles
 
 import sys
@@ -22,23 +22,29 @@ app = FastAPI(
     description="AI-powered Thai SMS & URL scam detection"
 )
 
-# allow Frontend to call this API from any origin
+# allowed origins — add production domain here when deploying
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5500",
+    "http://127.0.0.1:5500",
+    "http://localhost:8080",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # allow all origins for hackathon
-    allow_methods=["*"],   # allow GET, POST, etc.
-    allow_headers=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
 # define input format for each endpoint
 class SMSRequest(BaseModel):
-    # Frontend must send us
-    text: str      # SMS text
-    sender: str = ""  # sender name (optional)
+    text: str = Field(..., min_length=1)
+    sender: str = ""
 
 class URLRequest(BaseModel):
-    url: str       # URL to scan
+    url: str = Field(..., min_length=1)
 
 # ============================================
 # ENDPOINT 1: SMS Analyzer
@@ -46,9 +52,12 @@ class URLRequest(BaseModel):
 
 @app.post("/analyze/sms")
 def analyze_sms_endpoint(request: SMSRequest):
-    # receive SMS from Frontend → analyze → return result
-    result = analyze_sms(request.text, request.sender)
-    return result
+    try:
+        result = analyze_sms(request.text, request.sender)
+        return result
+    except Exception as e:
+        logging.error("analyze_sms failed: %s", e, exc_info=True)
+        return {"error": True, "message": "SMS analysis failed. Please try again."}
 
 # ============================================
 # ENDPOINT 2: URL Scanner
@@ -56,9 +65,12 @@ def analyze_sms_endpoint(request: SMSRequest):
 
 @app.post("/analyze/url")
 def analyze_url_endpoint(request: URLRequest):
-    # receive URL from Frontend → scan → return result
-    result = scan_url(request.url)
-    return result
+    try:
+        result = scan_url(request.url)
+        return result
+    except Exception as e:
+        logging.error("scan_url failed: %s", e, exc_info=True)
+        return {"error": True, "message": "URL scan failed. Please try again."}
 
 # ============================================
 # ENDPOINT 3: Check if the server is still running. (Health Check)
