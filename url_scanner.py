@@ -2,8 +2,6 @@ import logging
 import whois
 from datetime import datetime, timezone
 from urllib.parse import urlparse
-import requests
-
 THAI_BLACKLIST = {
     'faepass.cc',
     'th-post-verify.com',
@@ -72,89 +70,93 @@ CREDENTIAL_KEYWORDS = [
     'verify', 'login', 'signin', 'password', 'confirm',
     'otp', 'secure', 'account', 'banking', 'wallet',
     'credential', 'pin', 'atm', 'update', 'validate',
-    'register', 'withdraw', 'deposit', 'bonus'  
+    'register', 'withdraw', 'deposit', 'bonus'
 ]
+
+# ============================================
+# SCORE CONSTANTS
+# ============================================
+
+SCORE_SHORT_URL = 25
+SCORE_DOMAIN_VERY_NEW = 35
+SCORE_DOMAIN_YOUNG = 15
+SCORE_DOMAIN_UNKNOWN = 20
+SCORE_BRAND_IMPERSONATION = 35
+SCORE_TLD_CC = 35
+SCORE_TLD_SUSPICIOUS = 25
+SCORE_CREDENTIAL_MULTI = 20
+SCORE_CREDENTIAL_SINGLE = 8
+SCORE_BLACKLIST = 40
+SCORE_COMBO_BRAND_FORM = 15
+SCORE_COMBO_BRAND_UNKNOWN_DOMAIN = 15
+SCORE_COMBO_SHORT_URL = 15
+
+RISK_MAX = 99
+RISK_THRESHOLD_DANGER = 70
+RISK_THRESHOLD_WARN = 25
+
+DOMAIN_AGE_VERY_NEW_DAYS = 30
+DOMAIN_AGE_YOUNG_DAYS = 180
+CREDENTIAL_MULTI_MIN = 2
 
 # ============================================
 # MAIN FUNCTION
 # ============================================
 
-def scan_url(url: str) -> dict:
-    """
-    Input:  URL string
-    Output: dict along structure that Frontend want
-    """
-
-    # normalize URL
+def _normalize_url(url: str) -> tuple[str, str, str]:
+    """Return (normalized_url, domain, path)."""
     if not url.startswith('http'):
         url = 'https://' + url
-
     parsed = urlparse(url)
-    domain = parsed.netloc.lower()
-    path = parsed.path.lower()
+    return url, parsed.netloc.lower(), parsed.path.lower()
 
-    checks = []
-    risk_score = 0
 
-    # CHECK 0: Short URL
+def _calculate_score(short_result, age_result, brand_result, form_result, phish_result) -> int:
+    """Apply base scores and combo bonuses, return capped risk score."""
+    score = (
+        short_result['score']
+        + age_result['score']
+        + brand_result['score']
+        + form_result['score']
+        + (phish_result['score'] if phish_result else 0)
+    )
+
+    if brand_result['score'] > 0 and form_result['score'] > 0:
+        score += SCORE_COMBO_BRAND_FORM
+    if brand_result['score'] > 0 and age_result['score'] == SCORE_DOMAIN_UNKNOWN:
+        score += SCORE_COMBO_BRAND_UNKNOWN_DOMAIN
+    # Short URL alone is low risk; short URL + other signals earns bonus
+    if short_result['score'] > 0 and score > SCORE_SHORT_URL:
+        score += SCORE_COMBO_SHORT_URL
+
+    return min(score, RISK_MAX)
+
+
+def _get_verdict(risk: int, checks: list) -> tuple[str, str]:
+    """Return (verdict_type, verdict_label) from risk score."""
+    if risk >= RISK_THRESHOLD_DANGER:
+        return 'danger', get_danger_label(checks)
+    if risk >= RISK_THRESHOLD_WARN:
+        return 'warn', 'น่าสงสัย — ควรระวัง'
+    return 'safe', 'ปลอดภัย — ไม่พบสัญญาณอันตราย'
+
+
+def scan_url(url: str) -> dict:
+    url, domain, path = _normalize_url(url)
+
     short_result = check_short_url(domain)
-    checks.append(short_result['check'])
-    risk_score += short_result['score']
-
-    # CHECK 1: Domain Age
     age_result = check_domain_age(domain)
-    checks.append(age_result['check'])
-    risk_score += age_result['score']
-
-    # CHECK 2: Brand Impersonation
     brand_result = check_brand_impersonation(domain)
-    checks.append(brand_result['check'])
-    risk_score += brand_result['score']
-
-    # CHECK 3: TLD Suspicious
     tld_result = check_suspicious_tld(domain)
-    checks.append(tld_result['check'])
-    risk_score += tld_result['score']
-
-    # CHECK 4: Form / Credential Analysis (meaning:This URL contains words that indicate it will request important information from us.)
     form_result = check_credential_keywords(domain, path)
-    checks.append(form_result['check'])
-    risk_score += form_result['score']
-
-    # CHECK 5: PhishTank DB
     phish_result = check_phishing_db(url)
+
+    checks = [r['check'] for r in (short_result, age_result, brand_result, tld_result, form_result)]
     if phish_result:
         checks.append(phish_result['check'])
-        risk_score += phish_result['score']
 
-    # cal final risk and verdict
-    # Brand + Form keyword
-    if brand_result['score'] > 0 and form_result['score'] > 0:
-        risk_score += 15
-
-    # Brand + Domain Unknown
-    if brand_result['score'] > 0 and age_result['score'] == 20:
-        risk_score += 15
-
-    risk = min(risk_score, 99)  # <= 99 like SMS
-
-    if short_result['score'] > 0 and risk_score == 25:
-        # A single short URL with no other signals = warn, but low risk (25 is okay).
-        pass  
-
-    elif short_result['score'] > 0 and risk_score > 25:
-        # Short URL + have another signals  = more danger (+bonus)
-        risk_score += 15
-
-    if risk >= 70:
-        verdict_type = 'danger'
-        verdict_label = get_danger_label(checks)
-    elif risk >= 25:
-        verdict_type = 'warn'
-        verdict_label = 'น่าสงสัย — ควรระวัง'
-    else:
-        verdict_type = 'safe'
-        verdict_label = 'ปลอดภัย — ไม่พบสัญญาณอันตราย'
+    risk = _calculate_score(short_result, age_result, brand_result, form_result, phish_result)
+    verdict_type, verdict_label = _get_verdict(risk, checks)
 
     return {
         'url': url,
@@ -171,7 +173,7 @@ def check_short_url(domain) -> dict:
     for short in SHORT_URL_DOMAINS:
         if short in domain:
             return {
-                'score': 25,
+                'score': SCORE_SHORT_URL,
                 'check': {
                     'kind': 'warn',
                     'title': 'Short URL',
@@ -193,7 +195,7 @@ def check_short_url(domain) -> dict:
 def check_domain_age(domain) -> dict:
     try:
         w = whois.whois(domain)
-        creation = w.creation_date
+        creation = getattr(w, 'creation_date', None)
         if isinstance(creation, list):
             creation = creation[0]
         if creation:
@@ -201,9 +203,9 @@ def check_domain_age(domain) -> dict:
             if creation.tzinfo is None:
                 creation = creation.replace(tzinfo=timezone.utc)
             age_days = (datetime.now(timezone.utc) - creation).days
-            if age_days < 30:
+            if age_days < DOMAIN_AGE_VERY_NEW_DAYS:
                 return {
-                    'score': 35,
+                    'score': SCORE_DOMAIN_VERY_NEW,
                     'check': {
                         'kind': 'bad',
                         'title': 'Domain Age',
@@ -211,9 +213,9 @@ def check_domain_age(domain) -> dict:
                         'val': f'{age_days} วัน'
                     }
                 }
-            elif age_days < 180:
+            elif age_days < DOMAIN_AGE_YOUNG_DAYS:
                 return {
-                    'score': 15,
+                    'score': SCORE_DOMAIN_YOUNG,
                     'check': {
                         'kind': 'warn',
                         'title': 'Domain Age',
@@ -236,7 +238,7 @@ def check_domain_age(domain) -> dict:
         logging.warning("Domain age check failed for %s: %s", domain, e)
 
     return {
-        'score': 20,
+        'score': SCORE_DOMAIN_UNKNOWN,
         'check': {
             'kind': 'warn',
             'title': 'Domain Age',
@@ -252,7 +254,7 @@ def check_brand_impersonation(domain) -> dict:
             is_official = any(domain.endswith(od) for od in OFFICIAL_DOMAINS)
             if not is_official:
                 return {
-                    'score': 35,
+                    'score': SCORE_BRAND_IMPERSONATION,
                     'check': {
                         'kind': 'bad',
                         'title': 'Brand Impersonation',
@@ -275,7 +277,7 @@ def check_brand_impersonation(domain) -> dict:
 def check_suspicious_tld(domain) -> dict:
     for tld in SUSPICIOUS_TLDS:
         if domain.endswith(tld) or ('.' + tld.strip('.')) in domain:
-            score = 35 if tld == '.cc' else 25  # .cc gets higher score
+            score = SCORE_TLD_CC if tld == '.cc' else SCORE_TLD_SUSPICIOUS
             return {
                 'score': score,
                 'check': {
@@ -300,9 +302,9 @@ def check_suspicious_tld(domain) -> dict:
 def check_credential_keywords(domain, path) -> dict:
     full = domain + path
     found = [kw for kw in CREDENTIAL_KEYWORDS if kw in full]
-    if len(found) >= 2:
+    if len(found) >= CREDENTIAL_MULTI_MIN:
         return {
-            'score': 20,
+            'score': SCORE_CREDENTIAL_MULTI,
             'check': {
                 'kind': 'bad',
                 'title': 'Form Analysis',
@@ -312,7 +314,7 @@ def check_credential_keywords(domain, path) -> dict:
         }
     elif len(found) == 1:
         return {
-            'score': 8,
+            'score': SCORE_CREDENTIAL_SINGLE,
             'check': {
                 'kind': 'warn',
                 'title': 'Form Analysis',
@@ -336,7 +338,7 @@ def check_phishing_db(url: str) -> dict | None:
     domain = parsed.netloc.lower()
     if domain in THAI_BLACKLIST:
         return {
-            'score': 40,
+            'score': SCORE_BLACKLIST,
             'check': {
                 'kind': 'bad',
                 'title': 'Blacklist DB',
