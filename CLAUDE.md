@@ -61,27 +61,27 @@ Cybersense/
 
 ### 🟡 Medium — Clean Code & Performance
 
-**6. Duplicate regex search (`02_ai/xai.py:93, 105, 117, 149`)**
+**6. Duplicate regex search (`02_ai/xai.py:93, 105, 117, 149`)** --> (Done/Fixed)
 - ปัญหา: `re.search()` ถูกเรียก 2 ครั้งต่อ keyword — ครั้งแรก check, ครั้งสองเพื่อ `.group()`
 - แนวทางแก้: `m = re.search(...); if m: use m.group()` — เรียกครั้งเดียว
 
-**7. Magic numbers กระจัดกระจาย (`url_scanner.py`, `sms_analyzer.py`)**
+**7. Magic numbers กระจัดกระจาย (`url_scanner.py`, `sms_analyzer.py`)** --> (Done/Fixed)
 - ปัญหา: ค่าคะแนน 15, 25, 35, 70 และ threshold 75, 50 ฝังอยู่กลางโค้ด ไม่มี label
 - แนวทางแก้: ประกาศ constants ที่ด้านบนไฟล์ เช่น `RISK_THRESHOLD_DANGER = 70`
 
-**8. Repeated detection loops (`02_ai/xai.py:92-157`)**
+**8. Repeated detection loops (`02_ai/xai.py:92-157`)** --> (Done/Fixed)
 - ปัญหา: 5 loops โครงสร้างเหมือนกันทุกอัน (for keyword → re.search → append signal)
 - แนวทางแก้: extract เป็น helper function `_check_signal(signal_type, keywords, text)`
 
-**9. `scan_url()` ยาวเกินไป (`url_scanner.py:81-164`, 83 บรรทัด)**
+**9. `scan_url()` ยาวเกินไป (`url_scanner.py:81-164`, 83 บรรทัด)** --> (Done/Fixed)
 - ปัญหา: ฟังก์ชันเดียวทำหลาย responsibilities: normalize URL, รัน 6 checks, คำนวณ score, ตัดสิน verdict
 - แนวทางแก้: แตกเป็น `_normalize_url()`, `_calculate_score()`, `_get_verdict()` แยกกัน
 
-**10. Regex ไม่ pre-compile (`02_ai/xai.py:219-231`)**
+**10. Regex ไม่ pre-compile (`02_ai/xai.py:219-231`)** --> (Done/Fixed)
 - ปัญหา: `re.finditer(keyword, ...)` ใน triple nested loop → compile ซ้ำทุก call
 - แนวทางแก้: `re.compile()` ล่วงหน้าตอน module load และเก็บใน dict
 
-**11. Unused import (`url_scanner.py:4`)**
+**11. Unused import (`url_scanner.py:4`)** --> (Done/Fixed)
 - ปัญหา: `import requests` ไม่ถูกใช้งาน (อาจเป็น PhishTank API ที่ยังไม่ implement)
 - แนวทางแก้: ลบออก หรือเพิ่ม comment ว่า planned
 
