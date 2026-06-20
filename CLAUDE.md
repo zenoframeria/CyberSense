@@ -89,22 +89,22 @@ Cybersense/
 
 ### 🟢 Low — Clarity & Maintainability
 
-**12. Dead/test code ใน production modules**
-- `sms_analyzer.py:189, 196-197` — training code commented out
-- `xai.py:174-196, 266-275` — hardcoded test SMS examples
-- `url_scanner.py:360-364` — hardcoded test URL at bottom
-- แนวทางแก้: ย้าย training code ไป `train.py`, test examples ไป `tests/`
+**12. Dead/test code ใน production modules** --> (Done/Fixed)
+- Training code ย้ายไป `02_ai/train.py` แล้ว
+- Test SMS examples ใน `xai.py` ถูก wrap ใน `if __name__ == "__main__":` แล้ว
+- `sms_analyzer.py` ตอนนี้มีแค่ inference code ไม่มี training code ที่รันตอน import
+- `url_scanner.py` ใช้ `if __name__ == "__main__":` guard อยู่แล้ว ไม่ต้องเปลี่ยน
 
-**13. `print()` แทน logging (20+ จุดทั่วโปรเจกต์)**
+**13. `print()` แทน logging (20+ จุดทั่วโปรเจกต์)** --> (Done/Fixed)
 - แนวทางแก้: ใช้ Python `logging` module พร้อมกำหนด level ให้เหมาะสม
 
-**14. Hardcoded relative paths (`sms_analyzer.py:33, 211`)**
+**14. Hardcoded relative paths (`sms_analyzer.py:33, 211`)** --> (Done/Fixed)
 - ปัญหา: `"02_ai/cybersense_model"` crash ถ้ารันจาก directory อื่น
 - แนวทางแก้: `os.path.join(os.path.dirname(__file__), "cybersense_model")`
 
-**15. Risk score scale ไม่สม่ำเสมอ**
+**15. Risk score scale ไม่สม่ำเสมอ** --> (Done/Fixed)
 - ปัญหา: URL scanner คืนค่า 0-99 (`min(risk_score, 99)`), SMS analyzer คืนค่า 0-100
-- แนวทางแก้: normalize ทั้งคู่เป็น 0-100
+- แนวทางแก้: เปลี่ยน `RISK_MAX = 99` → `RISK_MAX = 100` ใน `url_scanner.py` ให้ทั้งคู่ใช้ scale 0-100
 
 ---
 
