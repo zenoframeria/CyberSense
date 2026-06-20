@@ -149,34 +149,6 @@ def detect_signals(text, sender=""):
     return signals
 
 # ============================================
-# Test with real SMS from our dataset!
-# ============================================
-
-test_cases = [ 
-    # scam form real dataset 
-    ("เนื่องจากคุณมีคุณสมบัติดีเยี่ยมihappyloanได้มอบเงินสำรองสูงสุด฿50000 กดเพื่อถอน https://h5.ihappyloan.com/cashindex", "ihappyloan"),
-    ("🍒 เว็บใหญ่ ใจถึง พึ่งได้ ไม่แตกยินดีคืนเงิน https://rls.my/xa1", "0898765432"),
-    ("ประกันรถ XXX 6448 เหลือ 30 วัน! หมดเขต 28/05/2569 กดต่อผ่านแอปเลย https://tidlor.info/3OlfbWv", "tidlor"),
-    ("🔥🔥ด่วน! ย้ายมาเวป USA เเตกง่าย คลิก cutt.ly/9xbb", "0812345678"),
-    ("พัสดุของท่านถูกตีกลับ ติดต่อพนักงานขนส่ง faepass.cc", "unknown"),
-    
-    # legit from real dataset จ
-    ("รหัส OTP เพื่อใช้งาน K PLUS=847293 หมดอายุใน 6 นาที กรุณาอย่าเปิดเผย", "KBank"),
-    ("ขอบคุณที่ชำระค่าบริการ AIS หมายเลข 0812345678 จำนวน 349 บาท", "AIS"),
-]
-
-for sms, sender in test_cases:
-    print(f"\nSMS: {sms[:50]}...")
-    print(f"Sender: {sender}")
-    results = detect_signals(sms, sender)
-    if results:
-        for r in results:
-            print(f"  [{r['type']}] {r['label']} → {r['detail']}")
-    else:
-        print("  ✅ ไม่พบสัญญาณอันตราย")
-    print("---")
-
-# ============================================
 # XAI: Highlight suspicious words in text
 # ============================================
 
@@ -247,16 +219,36 @@ def highlight_text(text, sender=""):
 
     return chunks
 
-# ============================================
-# Test highlight_text!
-# ============================================
 
-test_sms = "ท่านมีพัสดุค้างที่ไปรษณีย์ไทย กรุณายืนยันที่อยู่ภายใน 24 ชม. คลิก: cutt.ly/9xbb"
+if __name__ == "__main__":
+    test_cases = [
+        # scam from real dataset
+        ("เนื่องจากคุณมีคุณสมบัติดีเยี่ยมihappyloanได้มอบเงินสำรองสูงสุด฿50000 กดเพื่อถอน https://h5.ihappyloan.com/cashindex", "ihappyloan"),
+        ("🍒 เว็บใหญ่ ใจถึง พึ่งได้ ไม่แตกยินดีคืนเงิน https://rls.my/xa1", "0898765432"),
+        ("ประกันรถ XXX 6448 เหลือ 30 วัน! หมดเขต 28/05/2569 กดต่อผ่านแอปเลย https://tidlor.info/3OlfbWv", "tidlor"),
+        ("🔥🔥ด่วน! ย้ายมาเวป USA เเตกง่าย คลิก cutt.ly/9xbb", "0812345678"),
+        ("พัสดุของท่านถูกตีกลับ ติดต่อพนักงานขนส่ง faepass.cc", "unknown"),
+        # legit from real dataset
+        ("รหัส OTP เพื่อใช้งาน K PLUS=847293 หมดอายุใน 6 นาที กรุณาอย่าเปิดเผย", "KBank"),
+        ("ขอบคุณที่ชำระค่าบริการ AIS หมายเลข 0812345678 จำนวน 349 บาท", "AIS"),
+    ]
 
-print("Highlight result:")
-chunks = highlight_text(test_sms)
-for chunk in chunks:
-    if chunk["type"]:
-        print(f"  🔴 [{chunk['type']}] '{chunk['text']}'")
-    else:
-        print(f"  ⬜ '{chunk['text']}'")
+    for sms, sender in test_cases:
+        print(f"\nSMS: {sms[:50]}...")
+        print(f"Sender: {sender}")
+        results = detect_signals(sms, sender)
+        if results:
+            for r in results:
+                print(f"  [{r['type']}] {r['label']} → {r['detail']}")
+        else:
+            print("  ✅ ไม่พบสัญญาณอันตราย")
+        print("---")
+
+    test_sms = "ท่านมีพัสดุค้างที่ไปรษณีย์ไทย กรุณายืนยันที่อยู่ภายใน 24 ชม. คลิก: cutt.ly/9xbb"
+    print("\nHighlight result:")
+    chunks = highlight_text(test_sms)
+    for chunk in chunks:
+        if chunk["type"]:
+            print(f"  🔴 [{chunk['type']}] '{chunk['text']}'")
+        else:
+            print(f"  ⬜ '{chunk['text']}'")
