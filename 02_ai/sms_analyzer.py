@@ -205,22 +205,25 @@ print("Training complete!")
 
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
+import threading
 from xai import detect_signals, highlight_text
 
 # load model once and reuse — don't reload every time!
 MODEL_PATH = "02_ai/cybersense_model"
 _tokenizer = None
 _model = None
+_model_lock = threading.Lock()
 
 def _load_model():
-    # load model lazily — only when first needed
     global _tokenizer, _model
     if _tokenizer is None:
-        print("Loading model...")
-        _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
-        _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
-        _model.eval()  # set to evaluation mode, not training mode
-        print("Model ready!")
+        with _model_lock:
+            if _tokenizer is None:  # double-checked: re-verify inside lock
+                print("Loading model...")
+                _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
+                _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
+                _model.eval()
+                print("Model ready!")
 
 # ============================================
 # STEP 13: Predict risk score from SMS text
