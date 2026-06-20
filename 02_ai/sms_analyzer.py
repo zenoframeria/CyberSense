@@ -1,6 +1,7 @@
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import threading
+import logging
 from xai import detect_signals, highlight_text
 
 MODEL_PATH = "02_ai/cybersense_model"
@@ -25,11 +26,11 @@ def _load_model():
     if _tokenizer is None:
         with _model_lock:
             if _tokenizer is None:  # double-checked: re-verify inside lock
-                print("Loading model...")
+                logging.info("Loading model...")
                 _tokenizer = AutoTokenizer.from_pretrained(MODEL_PATH)
                 _model = AutoModelForSequenceClassification.from_pretrained(MODEL_PATH)
                 _model.eval()
-                print("Model ready!")
+                logging.info("Model ready!")
 
 
 def predict(text, sender=""):

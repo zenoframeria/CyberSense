@@ -3,6 +3,7 @@
 # Run: python 02_ai/train.py  (from project root)
 # ============================================
 
+import logging
 import pandas as pd
 from transformers import (
     AutoTokenizer,
@@ -14,19 +15,21 @@ import torch
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score
 
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+
 df = pd.read_csv("02_ai/Thai_sms_dataset_final_700_(last_version-CSV).csv")
 df["input_text"] = "Sender: " + df["Sender"] + " | " + df["Text"]
 
-print(f"Dataset loaded! Total rows: {len(df)}")
-print(f"Scam (1): {df['Label'].sum()} | Legit (0): {len(df) - df['Label'].sum()}")
+logging.info("Dataset loaded! Total rows: %d", len(df))
+logging.info("Scam (1): %d | Legit (0): %d", df['Label'].sum(), len(df) - df['Label'].sum())
 
 MODEL_NAME = "airesearch/wangchanberta-base-att-spm-uncased"
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-print("Tokenizer loaded!")
+logging.info("Tokenizer loaded!")
 
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, num_labels=2)
-print("Model loaded!")
+logging.info("Model loaded!")
 
 train_texts, test_texts, train_labels, test_labels = train_test_split(
     df["input_text"].tolist(),
@@ -34,11 +37,11 @@ train_texts, test_texts, train_labels, test_labels = train_test_split(
     test_size=0.2,
     random_state=42
 )
-print(f"Train: {len(train_texts)} rows | Test: {len(test_texts)} rows")
+logging.info("Train: %d rows | Test: %d rows", len(train_texts), len(test_texts))
 
 train_encodings = tokenizer(train_texts, truncation=True, padding=True, max_length=128)
 test_encodings = tokenizer(test_texts, truncation=True, padding=True, max_length=128)
-print("Tokenization done!")
+logging.info("Tokenization done!")
 
 
 class SMSDataset(torch.utils.data.Dataset):
@@ -57,7 +60,7 @@ class SMSDataset(torch.utils.data.Dataset):
 
 train_dataset = SMSDataset(train_encodings, train_labels)
 test_dataset = SMSDataset(test_encodings, test_labels)
-print(f"Dataset ready! Train: {len(train_dataset)} | Test: {len(test_dataset)}")
+logging.info("Dataset ready! Train: %d | Test: %d", len(train_dataset), len(test_dataset))
 
 training_args = TrainingArguments(
     output_dir="02_ai/model_output",
@@ -94,10 +97,10 @@ trainer = Trainer(
     compute_metrics=compute_metrics,
 )
 
-print("Starting training... this might take a few minutes!")
+logging.info("Starting training... this might take a few minutes!")
 trainer.train()
 
 model.save_pretrained("02_ai/cybersense_model")
 tokenizer.save_pretrained("02_ai/cybersense_model")
-print("Model saved to 02_ai/cybersense_model!")
-print("Training complete!")
+logging.info("Model saved to 02_ai/cybersense_model!")
+logging.info("Training complete!")
