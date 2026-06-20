@@ -82,6 +82,25 @@ GAMBLING_KEYWORDS = [
 
 UNKNOWN_SENDER_PATTERN = r"^[0-9]{9,10}$"
 
+_COMPILED = {
+    kw: re.compile(kw, re.IGNORECASE)
+    for kw in (
+        URGENCY_KEYWORDS + FAKE_URL_KEYWORDS + IMPERSONATION_KEYWORDS
+        + BAIT_KEYWORDS + GAMBLING_KEYWORDS
+    )
+}
+_COMPILED[UNKNOWN_SENDER_PATTERN] = re.compile(UNKNOWN_SENDER_PATTERN)
+
+
+def _check_signal(signal_type, keywords, text, kind, label, detail_template, strip_match=False):
+    for keyword in keywords:
+        m = _COMPILED[keyword].search(text)
+        if m:
+            matched = m.group().strip() if strip_match else m.group()
+            return {"type": signal_type, "kind": kind, "label": label, "detail": detail_template.format(matched)}
+    return None
+
+
 def detect_signals(text, sender=""):
     # scan SMS for danger signals using rules
     # returns list of signals found (empty = safe)
@@ -89,46 +108,19 @@ def detect_signals(text, sender=""):
     sender = sender or ""
     signals = []
 
-    # check GAMBLING — online gambling sites
-    for keyword in GAMBLING_KEYWORDS:
-        if re.search(keyword, text, re.IGNORECASE):
-            matched = re.search(keyword, text, re.IGNORECASE).group()
-            signals.append({
-                "type": "GAMBLING",
-                "kind": "bad",
-                "label": "เว็บพนันออนไลน์",
-                "detail": f'"{matched}" เป็นสัญญาณเว็บพนันผิดกฎหมาย'
-            })
-            break
-
-    # check URGENCY — time pressure tactics
-    for keyword in URGENCY_KEYWORDS:
-        if re.search(keyword, text, re.IGNORECASE):
-            matched = re.search(keyword, text, re.IGNORECASE).group()
-            signals.append({
-                "type": "URGENCY",
-                "kind": "bad",
-                "label": "สร้างความกดดันเรื่องเวลา",
-                "detail": f'"{matched}" เป็นกลยุทธ์เร่งรีบไม่ทันคิด'
-            })
-            break
-
-    # check FAKE_URL — suspicious short links or fake domains
-    for pattern in FAKE_URL_KEYWORDS:
-        if re.search(pattern, text, re.IGNORECASE):
-            matched = re.search(pattern, text, re.IGNORECASE).group()
-            signals.append({
-                "type": "FAKE_URL",
-                "kind": "bad",
-                "label": "URL น่าสงสัย",
-                "detail": f'"{matched.strip()}" ลิงก์ซ่อนปลายทางจริง ควรระวัง'
-            })
-            break
+    for s in [
+        _check_signal("GAMBLING", GAMBLING_KEYWORDS, text, "bad", "เว็บพนันออนไลน์",          '"{}" เป็นสัญญาณเว็บพนันผิดกฎหมาย'),
+        _check_signal("URGENCY",  URGENCY_KEYWORDS,  text, "bad", "สร้างความกดดันเรื่องเวลา", '"{}" เป็นกลยุทธ์เร่งรีบไม่ทันคิด'),
+        _check_signal("FAKE_URL", FAKE_URL_KEYWORDS, text, "bad", "URL น่าสงสัย",             '"{}" ลิงก์ซ่อนปลายทางจริง ควรระวัง', True),
+        _check_signal("BAIT",     BAIT_KEYWORDS,     text, "bad", "เหยื่อล่อด้วยผลประโยชน์",  '"{}" มักเป็นกลยุทธ์หลอกลวง'),
+    ]:
+        if s:
+            signals.append(s)
 
     # check IMPERSONATION — pretending to be real organizations
     # now checks sender to avoid false alarms on legit SMS
     for keyword in IMPERSONATION_KEYWORDS:
-        if re.search(keyword, text, re.IGNORECASE):
+        if _COMPILED[keyword].search(text):
             # check if sender is the real brand
             real_senders = BRAND_SENDER_MAP.get(keyword.lower(), [])
             sender_is_real = any(
@@ -145,20 +137,8 @@ def detect_signals(text, sender=""):
                 })
             break
 
-    # check BAIT — lure with rewards or easy money
-    for keyword in BAIT_KEYWORDS:
-        if re.search(keyword, text, re.IGNORECASE):
-            matched = re.search(keyword, text, re.IGNORECASE).group()
-            signals.append({
-                "type": "BAIT",
-                "kind": "bad",
-                "label": "เหยื่อล่อด้วยผลประโยชน์",
-                "detail": f'"{matched}" มักเป็นกลยุทธ์หลอกลวง'
-            })
-            break
-
     # check UNKNOWN_SENDER — phone number instead of org name
-    if sender and re.match(UNKNOWN_SENDER_PATTERN, sender.strip()):
+    if sender and _COMPILED[UNKNOWN_SENDER_PATTERN].match(sender.strip()):
         signals.append({
             "type": "UNKNOWN_SENDER",
             "kind": "warn",
@@ -219,7 +199,7 @@ def highlight_text(text, sender=""):
     
     for signal_type, keywords in HIGHLIGHT_RULES:
         for keyword in keywords:
-            for match in re.finditer(keyword, text, re.IGNORECASE):
+            for match in _COMPILED[keyword].finditer(text):
                 start = match.start()
                 end = match.end()
                 if start not in marked:
