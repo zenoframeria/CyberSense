@@ -2,9 +2,10 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import torch
 import threading
 import logging
+import os
 from xai import detect_signals, highlight_text
 
-MODEL_PATH = "02_ai/cybersense_model"
+MODEL_PATH = os.path.join(os.path.dirname(__file__), "cybersense_model")
 
 # Risk score thresholds
 RISK_THRESHOLD_SCAM = 80
