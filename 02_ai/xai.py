@@ -86,6 +86,7 @@ def detect_signals(text, sender=""):
     # scan SMS for danger signals using rules
     # returns list of signals found (empty = safe)
 
+    sender = sender or ""
     signals = []
 
     # check GAMBLING — online gambling sites
