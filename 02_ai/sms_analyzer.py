@@ -210,6 +210,16 @@ from xai import detect_signals, highlight_text
 
 # load model once and reuse — don't reload every time!
 MODEL_PATH = "02_ai/cybersense_model"
+
+# Risk score thresholds
+RISK_THRESHOLD_SCAM = 80
+RISK_THRESHOLD_SUSPICIOUS = 45
+
+# Fallback risk scores for rule-based layer (bypasses model for OOD cases)
+RISK_SCORE_UNKNOWN_WITH_LINK = 80
+RISK_SCORE_UNKNOWN_WITH_FINANCIAL = 55
+RISK_SCORE_UNKNOWN_SAFE = 15
+RISK_SCORE_UNKNOWN_MIN = 45
 _tokenizer = None
 _model = None
 _model_lock = threading.Lock()
@@ -241,6 +251,7 @@ def predict(text, sender=""):
         
     input_text = f"Sender: {current_sender} | {text}"
     
+    assert _tokenizer is not None and _model is not None
     inputs = _tokenizer(input_text, return_tensors="pt", truncation=True, padding=True, max_length=128)
     with torch.no_grad():
         outputs = _model(**inputs)
@@ -298,9 +309,9 @@ def analyze_sms(text, sender=""):
         fallback_triggered = True
         # ลิงก์เสี่ยงกว่าการขอเงินเปล่าๆ → ให้คะแนนต่างกัน
         if has_link:
-            risk_score = 80   # SCAM: unknown + แนบลิงก์
+            risk_score = RISK_SCORE_UNKNOWN_WITH_LINK
         else:
-            risk_score = 55   # SUSPICIOUS: unknown + ขอเงิน/บัญชี แต่ไม่มีลิงก์
+            risk_score = RISK_SCORE_UNKNOWN_WITH_FINANCIAL
     else:
         # เคสปกติ: ปล่อยให้โมเดลทำงาน
         risk_score = predict(text, sender)
@@ -308,13 +319,13 @@ def analyze_sms(text, sender=""):
         # Zero Trust เดิม: unknown ที่ไม่ติด keyword เสี่ยง
         if is_unknown_sender:
             if has_safe_word and not has_link:
-                risk_score = 15  # ปลอดภัยจริง (เช่น "แม่ ถึงบ้านยัง")
+                risk_score = RISK_SCORE_UNKNOWN_SAFE
             else:
-                risk_score = max(risk_score, 45)  # ตรึงขั้นต่ำ SUSPICIOUS
+                risk_score = max(risk_score, RISK_SCORE_UNKNOWN_MIN)
     
     # 5. สรุป Label
-    if risk_score >= 80: label = "SCAM"
-    elif risk_score >= 45: label = "SUSPICIOUS"
+    if risk_score >= RISK_THRESHOLD_SCAM: label = "SCAM"
+    elif risk_score >= RISK_THRESHOLD_SUSPICIOUS: label = "SUSPICIOUS"
     else: label = "LEGIT"
     
     signals = detect_signals(text, sender)
