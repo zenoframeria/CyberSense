@@ -6,7 +6,13 @@
 [English](#english) · [ภาษาไทย](#ภาษาไทย)
 
 <!-- TODO: เพิ่ม screenshot หรือ GIF ของแอปตรงนี้ เช่น ![CyberSense demo](docs/demo.gif) -->
-<!-- TODO: เพิ่มลิงก์วิดีโอ demo เช่น ▶️ [Watch the demo video](https://youtu.be/...) -->
+
+> [!NOTE]
+> **Project scope — a hackathon prototype, not a production system.**
+> The core features work end to end: SMS analysis, URL scanning, and explanations in a web UI running locally. It has only been tested on a small 700-message dataset, the rules are hand-written heuristics, and there is no public deployment. See [Limitations](#limitations--future-work).
+>
+> **ขอบเขตงาน — เป็นต้นแบบจาก Hackathon ไม่ใช่ระบบที่พร้อมใช้งานจริง**
+> ฟีเจอร์หลักทำงานได้ครบตั้งแต่ต้นจนจบ ทั้งวิเคราะห์ SMS สแกนลิงก์ และอธิบายผลผ่านหน้าเว็บที่รันบนเครื่อง แต่ทดสอบกับชุดข้อมูลเพียง 700 ข้อความ กฎต่าง ๆ เขียนขึ้นเองแบบ heuristic และยังไม่ได้เปิดให้ใช้งานสาธารณะ ดู[ข้อจำกัด](#ข้อจำกัดและแผนพัฒนาต่อ)
 
 ---
 
@@ -15,9 +21,6 @@
 ### The Problem
 
 SMS scams are one of the most common forms of fraud in Thailand. Scammers impersonate banks, delivery services, and government agencies, create a sense of urgency, and send links to fake websites that steal personal and banking information. Many victims cannot tell a scam message from a real one — especially elderly people.
-
-<!-- TODO: add a statistic with a source, e.g. from the Thai Police Cyber Bureau or ETDA -->
-
 ### What CyberSense Does
 
 - **SMS analysis** — paste a message (and optionally the sender name) to get a risk score from 0–100 and a verdict: `SCAM`, `SUSPICIOUS`, or `LEGIT`
@@ -123,9 +126,6 @@ Cybersense/
 ### ปัญหา
 
 SMS หลอกลวงเป็นภัยไซเบอร์ที่พบบ่อยที่สุดอย่างหนึ่งในประเทศไทย มิจฉาชีพมักแอบอ้างเป็นธนาคาร บริษัทขนส่ง หรือหน่วยงานรัฐ สร้างความเร่งรีบให้เหยื่อตัดสินใจโดยไม่ทันคิด และแนบลิงก์ไปยังเว็บปลอมเพื่อขโมยข้อมูลส่วนตัวและข้อมูลบัญชีธนาคาร หลายคนแยกไม่ออกว่าข้อความไหนจริงข้อความไหนปลอม โดยเฉพาะผู้สูงอายุ
-
-<!-- TODO: เพิ่มสถิติพร้อมแหล่งอ้างอิง เช่น จากกองบัญชาการตำรวจสืบสวนสอบสวนอาชญากรรมทางเทคโนโลยี หรือ ETDA -->
-
 ### CyberSense ทำอะไรได้บ้าง
 
 - **วิเคราะห์ SMS** — วางข้อความ (และชื่อผู้ส่ง ถ้ามี) ระบบจะให้คะแนนความเสี่ยง 0–100 และผลตัดสิน `SCAM` (หลอกลวง), `SUSPICIOUS` (น่าสงสัย) หรือ `LEGIT` (ปลอดภัย)
