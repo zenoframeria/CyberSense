@@ -4,3 +4,4 @@ venv/
 __pycache__/
 *.pyc
 02_ai/cybersense_model_old/
+.DS_Store
