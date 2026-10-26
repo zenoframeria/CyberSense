@@ -111,12 +111,13 @@ def _normalize_url(url: str) -> tuple[str, str, str]:
     return url, parsed.netloc.lower(), parsed.path.lower()
 
 
-def _calculate_score(short_result, age_result, brand_result, form_result, phish_result) -> int:
+def _calculate_score(short_result, age_result, brand_result, tld_result, form_result, phish_result) -> int:
     """Apply base scores and combo bonuses, return capped risk score."""
     score = (
         short_result['score']
         + age_result['score']
         + brand_result['score']
+        + tld_result['score']
         + form_result['score']
         + (phish_result['score'] if phish_result else 0)
     )
@@ -155,7 +156,7 @@ def scan_url(url: str) -> dict:
     if phish_result:
         checks.append(phish_result['check'])
 
-    risk = _calculate_score(short_result, age_result, brand_result, form_result, phish_result)
+    risk = _calculate_score(short_result, age_result, brand_result, tld_result, form_result, phish_result)
     verdict_type, verdict_label = _get_verdict(risk, checks)
 
     return {
