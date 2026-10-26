@@ -1,0 +1,16 @@
+{
+  "test_size": 105,
+  "metrics": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "f2": 1.0
+  },
+  "confusion_matrix": {
+    "tn": 53,
+    "fp": 0,
+    "fn": 0,
+    "tp": 52
+  }
+}

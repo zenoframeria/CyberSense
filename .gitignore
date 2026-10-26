@@ -3,3 +3,4 @@ venv/
 02_ai/cybersense_model/
 __pycache__/
 *.pyc
+02_ai/cybersense_model_old/
