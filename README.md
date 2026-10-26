@@ -62,7 +62,7 @@ Confusion matrix on the test set: 52/52 scams caught, 53/53 legitimate messages 
 
 | Part | Technology |
 |---|---|
-| AI model | WangchanBERTa, PyTorch, Hugging Face Transformers |
+| AI model | WangchanBERTa, PyTorch, Hugging Face Transformers — published at [FRAMERIA/cybersense-wangchanberta](https://huggingface.co/FRAMERIA/cybersense-wangchanberta) |
 | Backend | FastAPI (Python) |
 | Frontend | HTML, CSS, JavaScript |
 | URL checks | python-whois, rule-based scoring |
@@ -76,12 +76,11 @@ python -m venv venv
 venv\Scripts\activate            # Windows  (macOS/Linux: source venv/bin/activate)
 pip install -r requirements.txt
 
-# Train the model (≈12 minutes on CPU) — saves to 02_ai/cybersense_model/
-python 02_ai/train.py
-
 # Start the server, then open http://localhost:8000
 uvicorn main:app
 ```
+
+The fine-tuned model is downloaded automatically from [Hugging Face Hub](https://huggingface.co/FRAMERIA/cybersense-wangchanberta) on the first request. To train it yourself instead (≈12 minutes on CPU), run `python 02_ai/train.py` — the local model in `02_ai/cybersense_model/` is used when it exists.
 
 ### API
 
@@ -161,14 +160,14 @@ SMS หลอกลวงเป็นภัยไซเบอร์ที่พ�
 
 | ส่วน | เทคโนโลยี |
 |---|---|
-| โมเดล AI | WangchanBERTa, PyTorch, Hugging Face Transformers |
+| โมเดล AI | WangchanBERTa, PyTorch, Hugging Face Transformers — เผยแพร่ที่ [FRAMERIA/cybersense-wangchanberta](https://huggingface.co/FRAMERIA/cybersense-wangchanberta) |
 | Backend | FastAPI (Python) |
 | Frontend | HTML, CSS, JavaScript |
 | ตรวจลิงก์ | python-whois, ระบบให้คะแนนแบบ rule-based |
 
 ### วิธีรันบนเครื่อง
 
-ดูขั้นตอนในส่วน [Run Locally](#run-locally)
+ดูขั้นตอนในส่วน [Run Locally](#run-locally) — ไม่ต้องเทรนโมเดลเอง ระบบจะดาวน์โหลดโมเดลจาก Hugging Face ให้อัตโนมัติ
 
 ### ทีมและหน้าที่ของฉัน
 

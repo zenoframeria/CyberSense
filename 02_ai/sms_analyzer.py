@@ -5,7 +5,10 @@ import logging
 import os
 from xai import detect_signals, highlight_text
 
-MODEL_PATH = os.path.join(os.path.dirname(__file__), "cybersense_model")
+LOCAL_MODEL_PATH = os.path.join(os.path.dirname(__file__), "cybersense_model")
+# ไม่มีโมเดลในเครื่อง (เช่น clone จาก GitHub หรือรันบน Hugging Face Spaces) → โหลดจาก Hugging Face Hub
+HF_MODEL_REPO = os.environ.get("CYBERSENSE_MODEL_REPO", "FRAMERIA/cybersense-wangchanberta")
+MODEL_PATH = LOCAL_MODEL_PATH if os.path.isdir(LOCAL_MODEL_PATH) else HF_MODEL_REPO
 
 # Risk score thresholds
 RISK_THRESHOLD_SCAM = 80
