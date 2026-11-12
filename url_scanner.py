@@ -1,4 +1,5 @@
 import logging
+import re
 import whois
 from datetime import datetime, timezone
 from urllib.parse import urlparse
@@ -55,6 +56,14 @@ BRAND_KEYWORDS = {
     'tidlor': 'Tidlor',
 }
 
+# Short or common-word keywords: only count them when they are a whole
+# part of the domain (split on "." and "-"). Otherwise "line" would match
+# "myonline-shop.com" and "apple" would match "pineapple.com".
+BRAND_WHOLE_WORD_ONLY = {
+    'scb', 'bbl', 'ktb', 'tmb', 'gsb', 'baac', 'ttb', 'dsi',
+    'line', 'apple', 'revenue',
+}
+
 OFFICIAL_DOMAINS = [
     'kasikornbank.com', 'kbank.co.th',
     'scb.co.th', 'bangkokbank.com',
@@ -72,6 +81,10 @@ CREDENTIAL_KEYWORDS = [
     'credential', 'pin', 'atm', 'update', 'validate',
     'register', 'withdraw', 'deposit', 'bonus'
 ]
+
+# Same idea as BRAND_WHOLE_WORD_ONLY: "pin" is inside "opinion",
+# "atm" inside "atmosphere", "otp" inside "hotpot".
+CREDENTIAL_WHOLE_WORD_ONLY = {'pin', 'atm', 'otp'}
 
 # ============================================
 # SCORE CONSTANTS
@@ -99,16 +112,42 @@ DOMAIN_AGE_VERY_NEW_DAYS = 30
 DOMAIN_AGE_YOUNG_DAYS = 180
 CREDENTIAL_MULTI_MIN = 2
 
+WHOIS_TIMEOUT_SECONDS = 5
+
+# ============================================
+# HELPERS
+# ============================================
+
+def _tokens(text: str) -> list[str]:
+    """Split a domain or path into its word parts: 'th-post.verify.com' -> ['th', 'post', 'verify', 'com']."""
+    return [t for t in re.split(r'[^a-z0-9]+', text.lower()) if t]
+
+
+def _keyword_found(keyword: str, text: str, whole_word_only: set) -> bool:
+    if keyword in whole_word_only:
+        return keyword in _tokens(text)
+    return keyword in text
+
+
+def _is_domain_or_subdomain(domain: str, base: str) -> bool:
+    """True for 'kbank.co.th' or 'www.kbank.co.th', but NOT 'fakekbank.co.th'."""
+    return domain == base or domain.endswith('.' + base)
+
 # ============================================
 # MAIN FUNCTION
 # ============================================
 
 def _normalize_url(url: str) -> tuple[str, str, str]:
     """Return (normalized_url, domain, path)."""
-    if not url.startswith('http'):
+    url = url.strip()
+    # case-insensitive: "HTTPS://..." must not become "https://HTTPS://..."
+    if not re.match(r'^https?://', url, re.IGNORECASE):
         url = 'https://' + url
     parsed = urlparse(url)
-    return url, parsed.netloc.lower(), parsed.path.lower()
+    # .hostname (not .netloc) drops any port and "user@" part, so
+    # "https://kbank.co.th@evil.xyz" is read as evil.xyz — where it really goes.
+    domain = (parsed.hostname or '').lower()
+    return url, domain, parsed.path.lower()
 
 
 def _calculate_score(short_result, age_result, brand_result, tld_result, form_result, phish_result) -> int:
@@ -130,6 +169,10 @@ def _calculate_score(short_result, age_result, brand_result, tld_result, form_re
     if short_result['score'] > 0 and score > SCORE_SHORT_URL:
         score += SCORE_COMBO_SHORT_URL
 
+    # A confirmed phishing domain is always dangerous, even with no other signals
+    if phish_result:
+        score = max(score, RISK_THRESHOLD_DANGER)
+
     return min(score, RISK_MAX)
 
 
@@ -150,7 +193,7 @@ def scan_url(url: str) -> dict:
     brand_result = check_brand_impersonation(domain)
     tld_result = check_suspicious_tld(domain)
     form_result = check_credential_keywords(domain, path)
-    phish_result = check_phishing_db(url)
+    phish_result = check_phishing_db(domain)
 
     checks = [r['check'] for r in (short_result, age_result, brand_result, tld_result, form_result)]
     if phish_result:
@@ -172,7 +215,7 @@ def scan_url(url: str) -> dict:
 # ============================================
 def check_short_url(domain) -> dict:
     for short in SHORT_URL_DOMAINS:
-        if short in domain:
+        if _is_domain_or_subdomain(domain, short):
             return {
                 'score': SCORE_SHORT_URL,
                 'check': {
@@ -195,7 +238,8 @@ def check_short_url(domain) -> dict:
 
 def check_domain_age(domain) -> dict:
     try:
-        w = whois.whois(domain)
+        # a slow WHOIS server must not hold the request thread for long
+        w = whois.whois(domain, timeout=WHOIS_TIMEOUT_SECONDS)
         creation = getattr(w, 'creation_date', None)
         if isinstance(creation, list):
             creation = creation[0]
@@ -251,8 +295,8 @@ def check_domain_age(domain) -> dict:
 
 def check_brand_impersonation(domain) -> dict:
     for keyword, brand_name in BRAND_KEYWORDS.items():
-        if keyword in domain:
-            is_official = any(domain.endswith(od) for od in OFFICIAL_DOMAINS)
+        if _keyword_found(keyword, domain, BRAND_WHOLE_WORD_ONLY):
+            is_official = any(_is_domain_or_subdomain(domain, od) for od in OFFICIAL_DOMAINS)
             if not is_official:
                 return {
                     'score': SCORE_BRAND_IMPERSONATION,
@@ -277,7 +321,9 @@ def check_brand_impersonation(domain) -> dict:
 
 def check_suspicious_tld(domain) -> dict:
     for tld in SUSPICIOUS_TLDS:
-        if domain.endswith(tld) or ('.' + tld.strip('.')) in domain:
+        # only the real ending counts: "www.cnn.com" must not match ".cn",
+        # "linkedin.com" must not match ".link"
+        if domain.endswith(tld):
             score = SCORE_TLD_CC if tld == '.cc' else SCORE_TLD_SUSPICIOUS
             return {
                 'score': score,
@@ -302,7 +348,8 @@ def check_suspicious_tld(domain) -> dict:
 
 def check_credential_keywords(domain, path) -> dict:
     full = domain + path
-    found = [kw for kw in CREDENTIAL_KEYWORDS if kw in full]
+    found = [kw for kw in CREDENTIAL_KEYWORDS
+             if _keyword_found(kw, full, CREDENTIAL_WHOLE_WORD_ONLY)]
     if len(found) >= CREDENTIAL_MULTI_MIN:
         return {
             'score': SCORE_CREDENTIAL_MULTI,
@@ -334,10 +381,8 @@ def check_credential_keywords(domain, path) -> dict:
         }
     }
 
-def check_phishing_db(url: str) -> dict | None:
-    parsed = urlparse(url)
-    domain = parsed.netloc.lower()
-    if domain in THAI_BLACKLIST:
+def check_phishing_db(domain: str) -> dict | None:
+    if any(_is_domain_or_subdomain(domain, bad) for bad in THAI_BLACKLIST):
         return {
             'score': SCORE_BLACKLIST,
             'check': {
