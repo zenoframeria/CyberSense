@@ -6,7 +6,7 @@
 <title>CyberSense — รู้ทันก่อนโดนหลอก</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href=<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
   /* ---------- TWEAKABLE TOKENS ---------- */
   :root {
@@ -1716,15 +1716,21 @@ const HL_COLOR = {
   URGENCY: 'hl-orange', BAIT: 'hl-orange',
   IMPERSONATION: 'hl-yellow',
 };
+// Escape text before putting it into innerHTML. Covers quotes too, so it is
+// also safe inside attribute values. Use it on anything that comes from the
+// backend, the user, or localStorage.
 function escapeHTML(str) {
-  const div = document.createElement('div');
-  div.textContent = str == null ? '' : str;
-  return div.innerHTML;
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function showSmsResult(data) {
   // data = real API response { risk, label, signals[], highlights[] }
-  const risk = data.risk;
+  const risk = Number(data.risk) || 0;
   const cls = risk >= 70 ? 'r-high' : risk >= 40 ? 'r-mid' : 'r-low';
   let lbl = 'เสี่ยงสูงมาก';
   if (risk < 70) lbl = 'ควรเฝ้าระวัง';
@@ -1752,10 +1758,10 @@ function showSmsResult(data) {
           <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="${g.kind === 'ok' ? 'M9 12l2 2 4-4' : 'M12 8v4M12 16h.01'}" stroke="currentColor" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div class="sig-body">
-          <div class="sig-title">${g.label}</div>
-          <div class="sig-desc">${g.detail}</div>
+          <div class="sig-title">${escapeHTML(g.label)}</div>
+          <div class="sig-desc">${escapeHTML(g.detail)}</div>
         </div>
-        <div class="sig-tag">${g.type}</div>
+        <div class="sig-tag">${escapeHTML(g.type)}</div>
       </div>
     `;
   });
@@ -1885,8 +1891,8 @@ function showFileRow(name, size) {
     <div class="file-row">
       <div class="file-icon"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
       <div class="file-meta">
-        <div class="file-name">${name}</div>
-        <div class="file-size">${size}</div>
+        <div class="file-name">${escapeHTML(name)}</div>
+        <div class="file-size">${escapeHTML(size)}</div>
       </div>
       <div class="wave"><span></span><span></span><span></span><span></span><span></span></div>
     </div>
@@ -2120,15 +2126,16 @@ function openTakeover(s) {
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="${c.kind === 'ok' ? 'M9 12l2 2 4-4' : 'M12 8v4M12 16h.01'}"/></svg>
         </div>
         <div class="check-text">
-          <div class="check-title">${c.title}</div>
-          <div class="check-sub">${c.sub}</div>
+          <div class="check-title">${escapeHTML(c.title)}</div>
+          <div class="check-sub">${escapeHTML(c.sub)}</div>
         </div>
-        <div class="check-val ${vc}">${c.val}</div>
+        <div class="check-val ${vc}">${escapeHTML(c.val)}</div>
       </div>
     `;
   });
 
   const isLink = !!s.url;
+  const risk = Number(s.risk) || 0;
 
   tk.innerHTML = `
     <button class="icon-btn takeover-close" onclick="closeTakeover()" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg></button>
@@ -2136,12 +2143,12 @@ function openTakeover(s) {
       <div class="takeover-icon">
         <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
-      <h2 class="takeover-title">${s.verdict || (s.risk >= 60 ? 'สายเสี่ยงภัยคุกคาม' : 'สายปลอดภัย')}</h2>
+      <h2 class="takeover-title">${escapeHTML(s.verdict || (risk >= 60 ? 'สายเสี่ยงภัยคุกคาม' : 'สายปลอดภัย'))}</h2>
       <p class="takeover-sub">${isLink ? 'Sandbox ป้องกันเบราว์เซอร์หลักของคุณปลอดภัย' : 'ระบบป้องกันเสียงอัตโนมัติตัดสายความเสี่ยงสูงให้คุณแล้ว'}</p>
 
-      ${isLink ? `<div class="takeover-url">${s.url}</div>` : `<div style="font-size:15px;font-weight:600;">${s.callerName}</div>`}
+      ${isLink ? `<div class="takeover-url">${escapeHTML(s.url)}</div>` : `<div style="font-size:15px;font-weight:600;">${escapeHTML(s.callerName)}</div>`}
 
-      <div class="takeover-risk">${s.risk}<small>%</small></div>
+      <div class="takeover-risk">${risk}<small>%</small></div>
       <div class="takeover-risk-lbl">ดัชนีชี้วัดความเสี่ยง AI</div>
     </div>
 
@@ -2150,14 +2157,24 @@ function openTakeover(s) {
     </div>
 
     <div class="takeover-actions">
-      ${s.risk >= 50 ? `
-        <button class="btn btn-danger" onclick="closeTakeover(); saveToHistory('${isLink ? 'LINK':'CALL'}', '${isLink ? s.label : s.callerName}', ${s.risk});">🛡️ บล็อกและแจ้งเบาะแส</button>
+      ${risk >= 50 ? `
+        <button class="btn btn-danger" id="takeover-block">🛡️ บล็อกและแจ้งเบาะแส</button>
         <button class="btn btn-ghost" onclick="closeTakeover()">ปิดหน้าต่างเตือน</button>
       ` : `
         <button class="btn btn-primary" onclick="closeTakeover()">รับทราบความปลอดภัย</button>
       `}
     </div>
   `;
+
+  // Attach the handler here instead of building an onclick="..." string,
+  // so the URL / caller name never gets parsed as code.
+  const blockBtn = document.getElementById('takeover-block');
+  if (blockBtn) {
+    blockBtn.addEventListener('click', () => {
+      closeTakeover();
+      saveToHistory(isLink ? 'LINK' : 'CALL', isLink ? (s.url || s.label) : s.callerName, risk);
+    });
+  }
 }
 
 function closeTakeover() {
@@ -2234,6 +2251,8 @@ function renderHistory() {
     return;
   }
   el.innerHTML = history.map((h, i) => {
+    // history comes from localStorage and holds scanned URLs — escape it
+    h = { ...h, risk: Number(h.risk) || 0, sender: escapeHTML(h.sender), time: escapeHTML(h.time) };
     const riskColor = h.risk >= 70 ? 'var(--red)' : h.risk >= 40 ? 'var(--yellow)' : 'var(--accent)';
     const bgAlpha   = h.risk >= 70 ? 'rgba(255,61,90,0.08)' : h.risk >= 40 ? 'rgba(255,176,46,0.08)' : 'rgba(0,232,122,0.08)';
     const borderClr = h.risk >= 70 ? 'rgba(255,61,90,0.25)' : h.risk >= 40 ? 'rgba(255,176,46,0.25)' : 'rgba(0,232,122,0.25)';
